@@ -1,0 +1,30 @@
+# Python asosiy fayllari
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.log
+
+# Virtual environment
+venv/
+env/
+*.venv
+
+# Konfiguratsiya va maxfiy ma'lumotlar
+.env
+config.json
+settings.py
+secrets.json
+
+# IDE va tahrirlovchilar uchun
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Linux va MacOS uchun
+.DS_Store
+
+keraksizlar/
+
+
