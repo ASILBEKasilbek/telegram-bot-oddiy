@@ -371,10 +371,10 @@ async def start(msg:types.Message ,state : FSMContext):
      
      text = msg.text
      
-     if is_vip == "True":
-          is_sub = True
-     else:
-          is_sub = await sponsor_cheking_func(msg,lang)
+     # if is_vip == "True":
+     #      is_sub = True
+     # else:
+     #      is_sub = await sponsor_cheking_func(msg,lang)
      if is_vip == "False":
           if text == "🔍Anime Qidirish" or text == "🔍Запросить аниме":
                await msg.answer(searching_anime_message(lang),reply_markup=back_user_button_btn(lang))
@@ -907,6 +907,7 @@ async def start(msg:types.Message ,state : FSMContext):
      lang = data.get("lang")
 
      user_id = msg.from_user.id
+     is_vip = data.get("vip")
 
      a = await dp.bot.forward_message(chat_id=vip_buying_chat,message_id=msg.message_id,from_chat_id=user_id)
 
@@ -919,7 +920,7 @@ async def start(msg:types.Message ,state : FSMContext):
      await a.reply(text,reply_markup=vip_activate_clbtn(user_id))
 
      await User.menu.set()
-     await msg.answer("<b>✅Sizning sorovingiz adminlarga yuborildi ! Tez orada javob olasiz</b>",reply_markup=user_button_btn(lang))
+     await msg.answer("<b>✅Sizning sorovingiz adminlarga yuborildi ! Tez orada javob olasiz</b>",reply_markup=user_button_btn(lang,is_vip))
 
 @dp.message_handler(state=User.buying_lux,content_types=["photo"])
 async def start(msg:types.Message ,state : FSMContext):

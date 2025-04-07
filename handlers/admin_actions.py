@@ -82,7 +82,7 @@ class Add_sponser(StatesGroup):
 
 @dp.message_handler(commands="admin",state="*")
 async def start(msg:types.Message ,state : FSMContext):
-     
+
     if str(msg.chat.id)[0] == "-":
           pass
     else:
@@ -94,7 +94,7 @@ async def start(msg:types.Message ,state : FSMContext):
             await Admin.menu.set()
             await msg.answer("✅Admin panelga hush kelibsiz !",reply_markup=admin_button_btn())
         else:
-            await msg.answer("❌",reply_markup=user_button_btn(user[0][2]))
+            await msg.answer("❌",reply_markup=user_button_btn(user[0][2],"False"))
 
 # ==========================================================================================
 @dp.message_handler(content_types=["text"],state=Admin.menu)

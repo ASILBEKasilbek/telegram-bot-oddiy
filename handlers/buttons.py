@@ -12,14 +12,14 @@ def user_button_btn(lang,is_vip):
         cheker.add(KeyboardButton(buttons[4]))
         cheker.add(KeyboardButton(buttons[1]),KeyboardButton(buttons[2]))
         cheker.add(KeyboardButton(buttons[5]),KeyboardButton(buttons[6]))
-        cheker.add(KeyboardButton(buttons[7]))
+        # cheker.add(KeyboardButton(buttons[7]))
         cheker.resize_keyboard = True  
         
         return cheker
     elif is_vip=="False":
         cheker.add(KeyboardButton(buttons[0]),KeyboardButton(buttons[3]))
         cheker.add(KeyboardButton(buttons[1]),KeyboardButton(buttons[2]))
-        cheker.add(KeyboardButton(buttons[7]))
+        # cheker.add(KeyboardButton(buttons[7]))
         cheker.resize_keyboard = True  
         return cheker
 
