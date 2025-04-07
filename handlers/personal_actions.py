@@ -379,8 +379,10 @@ async def start(msg:types.Message ,state : FSMContext):
           if text == "🔍Anime Qidirish" or text == "🔍Запросить аниме":
                await msg.answer(searching_anime_message(lang),reply_markup=back_user_button_btn(lang))
                await User.searching.set()
+               await msg.answer("Qaytish uchun /start ni bosing")
+
           elif text == "Tasodifiy anime":
-               await msg.answer("Birorta harf yoki so'z yuboring")
+               await msg.answer("Tasodifiy anime tugmasini bosing")
                await User.tasodifiy.set()
           elif text == "📚Qo'llanma" or text == "📚Qo'llanma":
                await msg.answer(about_bot_message(lang,msg.from_user.id))
@@ -450,6 +452,8 @@ Lux kanalga Echchi va hentai animelar o'zbek tilida joylab boriladi 💎
           if text == "🔍Anime Qidirish" or text == "🔍Запросить аниме":
                await msg.answer(searching_anime_message(lang),reply_markup=back_user_button_btn(lang))
                await User.searching.set()
+               await msg.answer("Qaytish uchun /start ni bosing")
+
 
           elif text == "🏙Rasm orqali qidiruv" or text == "🏙Rasm orqali qidiruv":
                await User.search_by_photo.set()
@@ -498,7 +502,7 @@ Janri : {i[2].replace(","," ")}
           elif text == "📚Qo'llanma" or text == "📚Qo'llanma":
                await msg.answer(about_bot_message(lang,msg.from_user.id))
           elif text == "Tasodifiy anime":
-               await msg.answer("Birorta harf yoki so'z yuboring")
+               await msg.answer("Tasodifiy anime tugmasini bosing")
                await User.tasodifiy.set()
                
 
@@ -623,7 +627,7 @@ async def start(call: types.Message, state: FSMContext):
 
      await User.anime_menu.set()
      await call.answer(anime_menu_message(lang,anime),reply_markup=anime_menu_clbtn(lang,anime_id,False,have_serie,is_vip_user))
-
+     await call.answer("Qaytish uchun /start ni bosing")
 
 @dp.message_handler(content_types=["photo"], state=User.search_by_photo)
 async def start(msg: types.Message, state: FSMContext):
@@ -1080,7 +1084,7 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
 
           async with state.proxy() as data:
                data["lang"] = lang
-          await call.message.answer(main_menu_message(lang),reply_markup=user_button_btn(lang))
+          await call.message.answer(main_menu_message(lang),reply_markup=user_button_btn(lang,is_vip_user))
 
 @dp.callback_query_handler(text_contains = "watching",state=User.watching)
 async def qosh(call: types.CallbackQuery,state : FSMContext):
