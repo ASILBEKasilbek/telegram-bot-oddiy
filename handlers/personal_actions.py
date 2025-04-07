@@ -815,10 +815,11 @@ async def qosh(call: types.CallbackQuery, state: FSMContext):
 async def qosh(call: types.CallbackQuery, state: FSMContext):
      data = await state.get_data()
      lang = data.get("lang")
+     is_vip = data.get("vip")
 
      await call.message.delete()
      await User.menu.set()
-     await call.message.answer("<b>✅Bekor qilindi</b>",reply_markup=user_button_btn(lang))
+     await call.message.answer("<b>✅Bekor qilindi</b>",reply_markup=user_button_btn(lang,is_vip))
 
 @dp.callback_query_handler(text_contains = "vip",state=User.menu)
 async def qosh(call: types.CallbackQuery,state : FSMContext):
