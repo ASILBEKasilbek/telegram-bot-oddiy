@@ -6,13 +6,22 @@ def choose_language_clbtn():
     cheker.add(InlineKeyboardButton("🇺🇿 O'zbekecha",callback_data=f'select,uz'))
     # cheker.add(InlineKeyboardButton("🇷🇺 Русский",callback_data=f'select,ru')) 
     return cheker
-
+def search_clbtn():
+    cheker = InlineKeyboardMarkup()
+    cheker.add(InlineKeyboardButton("🖼 Rasm orqali qidiruv",callback_data=f'search_rasm'))
+    cheker.add(InlineKeyboardButton("🔍Nom va ID orqali qidirish",callback_data=f'search_id_name'))
+    # cheker.add(InlineKeyboardButton("🔃 Tasodifiy anime ",callback_data=f'search,teg'))
+    # cheker.add(InlineKeyboardButton("🔸️Eng ko'p ko'rilgan animelar",callback_data=f'search,name'))
+    # cheker.add(InlineKeyboardButton("🔸️ Eng ko'p ko'rilgan animelar ",callback_data=f'search,serie'),InlineKeyboardButton("🔍Janr orqali qidirish",callback_data=f'search,anime_id')) 
+    return cheker
 
 def vip_buying_clbtn():
     cheker = InlineKeyboardMarkup()
     cheker.add(InlineKeyboardButton("⚡️Sotib olish", callback_data='vip,vip'))
     cheker.add(InlineKeyboardButton("🆓 Tekin olish", callback_data='free'))
     return cheker
+
+
 
 def which_vip_clbtn():
     cheker = InlineKeyboardMarkup()

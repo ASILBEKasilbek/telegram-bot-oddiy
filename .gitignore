@@ -5,6 +5,12 @@
 __pycache__/
 *.log
 
+database.db
+*.sqlite3
+*.db
+*.db-journal
+*.sqlite
+*.sqlite-journal
 # Virtual environment
 venv/
 env/
@@ -21,10 +27,9 @@ secrets.json
 .idea/
 *.swp
 *.swo
-
+Baza/
 # Linux va MacOS uchun
 .DS_Store
 myenv
 keraksizlar/
-
-
+database.db

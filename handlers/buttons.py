@@ -9,9 +9,8 @@ def user_button_btn(lang,is_vip):
     if is_vip=="True":
             
         cheker.add(KeyboardButton(buttons[0]),KeyboardButton(buttons[3]))
-        cheker.add(KeyboardButton(buttons[4]))
+        cheker.add(KeyboardButton(buttons[4]),KeyboardButton(buttons[5]))
         cheker.add(KeyboardButton(buttons[1]),KeyboardButton(buttons[2]))
-        cheker.add(KeyboardButton(buttons[5]),KeyboardButton(buttons[6]))
         # cheker.add(KeyboardButton(buttons[7]))
         cheker.resize_keyboard = True  
         
@@ -41,7 +40,6 @@ def admin_button_btn():
 
 def back_user_button_btn(lang):
     cheker = ReplyKeyboardMarkup()
-    
     if lang == "uz":
         cheker.add(KeyboardButton("🔙Ortga"))
     cheker.resize_keyboard = True  

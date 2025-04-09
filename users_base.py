@@ -400,32 +400,104 @@ def get_random_anime_sql():
         return result
     else:
         return "Hech qanday anime topilmadi."
+    
+from difflib import SequenceMatcher
+
+from difflib import SequenceMatcher
 
 def search_anime_base(prompt):
-    cursor.execute(f"""SELECT * FROM anime """)
-    data = cursor.fetchall()
-    conn.commit()
-    
-    def similar(a, b):
-        return SequenceMatcher(None, a, b).ratio()
-    
-    similar_anime = []
-    
-    for i in data:
-        similarity = similar(prompt,i[3])
+    print("🔍 Kiritilgan prompt:", repr(prompt))
 
-        if similarity < 0.7:
-            tegs = str(i[6]).split(",")
-            for a in tegs:
-                similarity = similar(prompt,a)
-            
-                if similarity > 0.7:
-                    similar_anime.append(i)
-                    break
-        else:
-            similar_anime.append(i)
-        
+    query = "SELECT * FROM anime WHERE 1=1"
+    parameters = []
+
+    prompt = prompt.strip()
+    is_int = prompt.isdigit()
+    is_bool = prompt.lower() in ["true", "false"]
+    is_lang = prompt.lower() in ["uz", "ru", "jp", "en"]
+    is_status = prompt.lower() in ["ongoing", "completed", "paused"]
+
+    print(f"📊 Turi aniqlandi: is_int={is_int}, is_bool={is_bool}, is_lang={is_lang}, is_status={is_status}")
+
+    if is_int:
+        query += " AND anime_id = ?"
+        parameters.append(int(prompt))
+    elif is_bool:
+        query += " AND is_vip = ?"
+        parameters.append(prompt.lower() == "true")
+    elif is_lang:
+        query += " AND lang = ?"
+        parameters.append(prompt.lower())
+    elif is_status:
+        query += " AND status = ?"
+        parameters.append(prompt.lower())
+    else:
+        query += " AND (name LIKE ? OR genre LIKE ?)"
+        parameters.append(f"%{prompt}%")
+        parameters.append(f"%{prompt}%")
+
+    print("📝 SQL so‘rov:", query)
+    print("📦 Parametrlar:", parameters)
+
+    # SQL so‘rovni bajarish
+    try:
+        cursor.execute(query, parameters)
+        results = cursor.fetchall()
+        print(f"📥 SQL natija soni: {len(results)}")
+    except Exception as e:
+        print("❌ SQL xatolik:", e)
+        return []
+
+    # 🛠️ is_int va boshqalar bo‘lsa similarity kerak emas
+    if is_int or is_bool or is_lang or is_status:
+        print(f"✅ Yakuniy natijalar: {len(results)} ta topildi. (similarity yo‘q)")
+        return results
+
+    # 🔍 Similarity funksiyasi (faqat name/genre uchun)
+    def similar(a, b):
+        return SequenceMatcher(None, a.lower(), b.lower()).ratio()
+
+    similar_anime = []
+
+    for row in results:
+        name_similarity = similar(prompt, row[3])  # row[3] = name
+        if name_similarity >= 0.7:
+            similar_anime.append(row)
+            continue
+        for tag in str(row[6]).split(","):  # row[6] = genre
+            if similar(prompt, tag.strip()) >= 0.7:
+                similar_anime.append(row)
+                break
+
+    print(f"✅ Yakuniy natijalar: {len(similar_anime)} ta topildi.")
     return similar_anime
+
+
+# def search_anime_base(prompt):
+#     cursor.execute(f"""SELECT * FROM anime """)
+#     data = cursor.fetchall()
+#     conn.commit()
+    
+#     def similar(a, b):
+#         return SequenceMatcher(None, a, b).ratio()
+    
+#     similar_anime = []
+    
+#     for i in data:
+#         similarity = similar(prompt,i[3])
+
+#         if similarity < 0.7:
+#             tegs = str(i[6]).split(",")
+#             for a in tegs:
+#                 similarity = similar(prompt,a)
+            
+#                 if similarity > 0.7:
+#                     similar_anime.append(i)
+#                     break
+#         else:
+#             similar_anime.append(i)
+        
+#     return similar_anime
 
 def add_anime_base(lang,treller_id,name,about,genre,teg,dub,series = 0,films = 0,is_vip = 0,status = "loading",views = 0):
     cursor.execute('INSERT INTO anime (lang,treller_id,name,about,genre,teg,dub,series,films,is_vip,status,views) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);', (lang,treller_id,name,about,genre,teg,dub,series,films,is_vip,status,views))

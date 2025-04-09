@@ -375,17 +375,19 @@ async def start(msg:types.Message ,state : FSMContext):
      #      is_sub = True
      # else:
      #      is_sub = await sponsor_cheking_func(msg,lang)
-     if is_vip == "False":
-          if text == "🔍Anime Qidirish" or text == "🔍Запросить аниме":
-               await msg.answer(searching_anime_message(lang),reply_markup=back_user_button_btn(lang))
-               await User.searching.set()
-               await msg.answer("Qaytish uchun /start ni bosing")
 
-          elif text == "Tasodifiy anime":
+     if text == "📚Qo'llanma" or text == "📚Qo'llanma":
+          await msg.answer(about_bot_message(lang,msg.from_user.id))
+
+     elif text == "💸Reklama va Homiylik" or text == "💸Reklama va Homiylik":
+          admin_user_name = get_user_base(6385061330)[0][1]
+          await msg.answer(contacting_message(lang,admin_user_name))
+     
+     if is_vip == "False":
+
+          if text == "Tasodifiy anime":
                await msg.answer("Tasodifiy anime tugmasini bosing")
                await User.tasodifiy.set()
-          elif text == "📚Qo'llanma" or text == "📚Qo'llanma":
-               await msg.answer(about_bot_message(lang,msg.from_user.id))
 
           elif text == "⚡️AniPass" or text == "⚡️AniPass":
                is_vip = get_user_is_vip_base(user_id)
@@ -441,24 +443,28 @@ Lux kanalga Echchi va hentai animelar o'zbek tilida joylab boriladi 💎
 <b>🔥Qaysi turdagi obunani sotib olishni istaysiz ?</b>
 """
                     await msg.answer(text,reply_markup=which_vip_clbtn())
+         
+          elif text == "🔍Anime Qidirish":
+               await msg.answer(
+                    "🔍Qidirish uchun anime nomi yoki ID sini yuboring !",
+                    reply_markup=back_button_btn()
+                    )
 
-          elif text == "💸Reklama va Homiylik" or text == "💸Reklama va Homiylik":
-               admin_user_name = get_user_base(6385061330)[0][1]
-               await msg.answer(contacting_message(lang,admin_user_name))
-
-          
+               await User.searching.set()
+     
+    
      elif is_vip =="True":
 
+          # if text == "🏙Rasm orqali qidiruv" or text == "🏙Rasm orqali qidiruv":
+          #      await User.search_by_photo.set()
+          #      text = "<b>🔍Nomini topa olmayotgan animeingizni Rasmini yuboring</b>"
+          #      await msg.answer(text,reply_markup=back_user_button_btn(lang))
+          
           if text == "🔍Anime Qidirish" or text == "🔍Запросить аниме":
-               await msg.answer(searching_anime_message(lang),reply_markup=back_user_button_btn(lang))
+               await msg.answer("Qidiruv turini tanlang!",reply_markup=search_clbtn())
                await User.searching.set()
-               await msg.answer("Qaytish uchun /start ni bosing")
+               # await msg.answer("Qaytish uchun /start ni bosing")
 
-
-          elif text == "🏙Rasm orqali qidiruv" or text == "🏙Rasm orqali qidiruv":
-               await User.search_by_photo.set()
-               text = "<b>🔍Nomini topa olmayotgan animeingizni Rasmini yuboring</b>"
-               await msg.answer(text,reply_markup=back_user_button_btn(lang))
           
           elif text == "Animelar ro'yhati 📓" or text == "Animelar ro'yhati 📓":
                animes = get_animes_base()
@@ -499,8 +505,6 @@ Janri : {i[2].replace(","," ")}
 
                await msg.answer(text)
 
-          elif text == "📚Qo'llanma" or text == "📚Qo'llanma":
-               await msg.answer(about_bot_message(lang,msg.from_user.id))
           elif text == "Tasodifiy anime":
                await msg.answer("Tasodifiy anime tugmasini bosing")
                await User.tasodifiy.set()
@@ -560,10 +564,6 @@ Janri : {i[2].replace(","," ")}
 """
                     await msg.answer(text,reply_markup=which_vip_clbtn())
 
-          elif text == "💸Reklama va Homiylik" or text == "💸Reklama va Homiylik":
-               admin_user_name = get_user_base(6385061330)[0][1]
-               await msg.answer(contacting_message(lang,admin_user_name))
-
           elif len(text) > 5:
                anime = search_anime_base(text)
                user_id = msg.from_user.id
@@ -587,12 +587,31 @@ Janri : {i[2].replace(","," ")}
                     await msg.answer(anime_menu_message(lang,anime),reply_markup=anime_menu_clbtn(lang,anime_id,False,have_serie,is_vip))
 
           vip = data.get("vip")
+
           if not vip:
                async with state.proxy() as data:
                     data["lang"] = lang
                     data["vip"] = is_vip
 
+@dp.callback_query_handler(text_contains = "search_rasm",state=User.searching)
+async def start(call: types.CallbackQuery,state : FSMContext):
+     lang = (await state.get_data()).get("lang")
+     # is_vip_user = (await state.get_data()).get("vip")
+     
+     await call.message.delete()
+     await call.message.answer("🔍Nomini topa olmayotgan animeingizni Rasmini yuboring",reply_markup=back_user_button_btn(lang))
+     await User.search_by_photo.set()
+     await call.answer("Qaytish uchun /start ni bosing")
 
+@dp.callback_query_handler(text_contains = "search_id_name",state=User.searching)
+async def start(call: types.CallbackQuery,state : FSMContext):
+     lang = (await state.get_data()).get("lang")
+     # is_vip_user = (await state.get_data()).get("vip")
+
+     await call.message.delete()
+     await call.message.answer("🔍 Anime nomini yoki KOD ni yuboring",reply_markup=back_user_button_btn(lang))
+     await User.searching.set()
+     await call.answer("Qaytish uchun /start ni bosing")
 
 @dp.message_handler(state=[User.tasodifiy, User.anime_menu, User.watching])
 async def start(call: types.Message, state: FSMContext):
@@ -688,39 +707,43 @@ async def start(msg:types.Message ,state : FSMContext):
      if text != "🔙Ortga":
 
           anime = search_anime_base(text)
+          
           if not anime:
                await msg.answer(not_found_this_anime_message(lang,text),reply_markup=back_button_btn())
           else:
-               a = await msg.answer("⏳",reply_markup=back_user_button_btn(lang))
-               await a.delete()
-               
-               count = len(anime)
-               
-               if count == 1:
-                    await msg.answer(anime_found_message(lang))
-                    
-                    have_serie = False
-                    if anime[0][8] > 0:
-                         have_serie = True
-
-                    is_vip = anime[0][10]
-
-                    trailer_id = anime[0][2]
-                    anime_id = anime[0][0]
-                    trailer = await dp.bot.forward_message(message_id=trailer_id,chat_id=user_id,from_chat_id=anime_treller_chat)
-                    await state.finish()
-
-                    async with state.proxy() as data:
-                         data["trailer"] = trailer.message_id
-                         data["have_serie"] = have_serie
-                         data["lang"] = lang
-                         data["vip"] = is_vip_user
-
-                    await User.anime_menu.set()
-                    await msg.answer(anime_menu_message(lang,anime),reply_markup=anime_menu_clbtn(lang,anime_id,False,have_serie,is_vip))
-                    
-               else:
+               if text.isdigit():
                     await msg.answer(select_function_message(lang),reply_markup=admin_searched_animes_clbtn(anime))
+               else:
+                    a = await msg.answer("⏳",reply_markup=back_user_button_btn(lang))
+                    await a.delete()
+                    
+                    count = len(anime)
+                    
+                    if count == 1:
+                         await msg.answer(anime_found_message(lang))
+                         
+                         have_serie = False
+                         if anime[0][8] > 0:
+                              have_serie = True
+                         
+                         is_vip = anime[0][10]
+
+                         trailer_id = anime[0][2]
+                         anime_id = anime[0][0]
+                         trailer = await dp.bot.forward_message(message_id=trailer_id,chat_id=user_id,from_chat_id=anime_treller_chat)
+                         await state.finish()
+
+                         async with state.proxy() as data:
+                              data["trailer"] = trailer.message_id
+                              data["have_serie"] = have_serie
+                              data["lang"] = lang
+                              data["vip"] = is_vip_user
+
+                         await User.anime_menu.set()
+                         await msg.answer(anime_menu_message(lang,anime),reply_markup=anime_menu_clbtn(lang,anime_id,False,have_serie,is_vip))
+                         
+                    else:
+                         await msg.answer(select_function_message(lang),reply_markup=admin_searched_animes_clbtn(anime))
                
      else:
           await state.finish()
@@ -944,11 +967,8 @@ async def start(msg:types.Message ,state : FSMContext):
      await msg.answer("<b>✅Sizning so'rovingiz adminlarga yuborildi ! Tez orada javob olasiz</b>",reply_markup=user_button_btn(lang))
 
 
-
-
 @dp.callback_query_handler(text_contains = "search",state=[User.searching,User.anime_menu,User.watching])
 async def qosh(call: types.CallbackQuery,state : FSMContext):
-
      anime_id = call.data.split(",")[1]
 
      data = await state.get_data()

@@ -1,6 +1,6 @@
 def user_button(lang):
     if lang == "uz":
-        buttons = ["🔍Anime Qidirish","📚Qo'llanma","💸Reklama va Homiylik","⚡️AniPass","🏙Rasm orqali qidiruv","Animelar ro'yhati 📓","Ongoing animelar 🧧","Tasodifiy anime"]
+        buttons = ["🔍Anime Qidirish","📚Qo'llanma","💸Reklama va Homiylik","⚡️AniPass","Animelar ro'yhati 📓","Ongoing animelar 🧧","Tasodifiy anime"]
     elif lang == "ru":
         buttons = []
         
