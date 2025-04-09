@@ -18,6 +18,8 @@ anime_series_chat = -1002076256295
 vip_buying_chat = -1002099276344
 from dotenv import load_dotenv
 import os
+from datetime import datetime
+
 
 
 load_dotenv()
@@ -292,7 +294,8 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
      lang = call.data.split(",")[1]
      user_id = call.from_user.id
      username = f"@{call.from_user.username}"
-     is_vip = check_premium_func(user_id)
+     
+     is_vip = await check_premium_func(user_id)
 
 
      async with state.proxy() as data:
@@ -423,18 +426,25 @@ Lux kanalga Echchi va hentai animelar o'zbek tilida joylab boriladi 💎
                     text = f"""
 <b>Sizdagi 💎Lux kanaldagi obunangizni tugash vaqti :</b> {is_lux[0][0]}
 -
-🔥<b>AniDuble botidan ⚡️AniPass sotib olganingizdan keyingi qulayliklar<i>
+🔥<b>💫 Aniduble botidan ⚡️ AniPass sotib olganingizdan keyingi qulayliklar
 °•───────────────────
-🔹 Botni 2x tezlikda ishlatish 
-🔹 Botdan mukkammal va erkin foydalana olish 
-🔹 Eski seryalar o'chmaydi 
-🔹 Premium animelarni tomosha qila olish ( hentai animeni )
-🔹 Homiy kanallarga a'zo bo'lish shart emas
-🔹 AniDuble ni qo'llab quvvatlash</i>
+🎉Qulayliklar 
+⚡️ Botni 2x tezlikda ishlatish 
+💣 Botdan mukkammal va erkin foydalana olish 
+📺 Eski seriyalar o'chmaydi 
+📡 Homiy kanallarga a'zo bo'lish shart 
+emas .
+🧨 Botdan sizga qoshimcha reklamalar kelmaydi va bezovta qilmaydi .
 °•───────────────────
-⚠️Eslatma : AniPass faqat bot uchun amal qiladi 
-⚡️AniPass narxi atiga : 5.000 so'm💵</b>
+🎟 Qoshiladigan tugmalar 
+🖼 Rasm orqali qidiruv
+🔃 Tasodifiy anime 
+🔸️ Eng ko'p ko'rilgan animelar 
+🏮 Janr orqali qidiruv 
+⚠️ Eslatma : ⚡️AniPass  faqat bot uchun amal qiladi 
+⚡️ AniPass narxi atiga : 5.000 so'm 💵</b>
 """
+                    print(text)
                     await msg.answer_animation(animation=open("media/vip.mp4","rb"),caption=text,reply_markup=vip_buying_clbtn())
 
                else:
@@ -510,18 +520,51 @@ Janri : {i[2].replace(","," ")}
                await User.tasodifiy.set()
                
 
-          elif text == "⚡️AniPass" or text == "⚡️AniPass":
+
+          elif text == "⚡️AniPass":
                is_vip = get_user_is_vip_base(user_id)
-               is_lux = get_user_is_lux_base(user_id)
 
-               if is_vip[0][0] != "0" and is_lux[0][0] != "0":
+               if is_vip and is_vip[0][0]:
+                    expiry_date_str = is_vip[0][0]
 
-                    text = f"""
-<b>Sizdagi ⚡️AniPass obunani tugash vaqti :</b> {is_vip[0][0]}
-"""
+                    # Formatni avtomatik aniqlash
+                    try:
+                         # Avval to‘liq datetime format bo‘lishi mumkinligini tekshir
+                         expiry_date = datetime.strptime(expiry_date_str, "%Y-%m-%d %H:%M:%S")
+                    except ValueError:
+                         # Faqat sana bo‘lsa, vaqtni 00:00:00 deb qo‘sh
+                         expiry_date = datetime.strptime(expiry_date_str, "%Y-%m-%d")
+
+                    current_time = datetime.now()
+                    time_left = expiry_date - current_time
+
+                    if time_left.total_seconds() > 0:
+                         days_left = time_left.days
+                         hours_left = time_left.seconds // 3600
+                         minutes_left = (time_left.seconds // 60) % 60
+
+                         message = (
+                              f"<b>Sizdagi ⚡️AniPass tugash vaqti:</b> {expiry_date_str}\n"
+                              f"<b>Qolgan vaqt:</b> {days_left} kun, {hours_left} soat, {minutes_left} daqiqa"
+                         )
+                    else:
+                         message = (
+                              f"<b>Sizdagi ⚡️AniPass muddati tugagan!</b>\n"
+                              f"Tugash vaqti: {expiry_date_str}"
+                         )
+               else:
+                    message = "<b>Sizda ⚡️AniPass mavjud emas yoki muddati aniqlanmadi.</b>"
+
+               await msg.answer(message, reply_markup=user_button_btn(lang, is_vip))
+
+#                if is_vip[0][0] != "0" and is_lux[0][0] != "0":
+
+#                     text = f"""
+# <b>Sizdagi ⚡️AniPass obunani tugash vaqti :</b> {is_vip[0][0]}
+# """
                     
-# <b>Sizdagi 💎Lux kanaldagi obunangizni tugash vaqti :</b> {is_lux[0][0]}
-                    await msg.answer(text,reply_markup=user_button_btn(lang))
+# # <b>Sizdagi 💎Lux kanaldagi obunangizni tugash vaqti :</b> {is_lux[0][0]}
+#                     await msg.answer(text,reply_markup=user_button_btn(lang))
 
 #                elif is_vip[0][0] != "0" and is_lux[0][0] == "0":
 
@@ -538,31 +581,38 @@ Janri : {i[2].replace(","," ")}
 # """                 
 #                     await msg.answer_animation(animation=open("media/vip_channel.mp4","rb"),caption=text,reply_markup=vip_channel_clbtn())
                     
-               elif is_vip[0][0] == "0" and is_lux[0][0] != "0":
+#                elif is_vip[0][0] == "0" and is_lux[0][0] != "0":
 
-                    text = f"""
-<b>Sizdagi 💎Lux kanaldagi obunangizni tugash vaqti :</b> {is_lux[0][0]}
--
-🔥<b>AniDuble botidan ⚡️AniPass sotib olganingizdan keyingi qulayliklar<i>
-°•───────────────────
-🔹 Botni 2x tezlikda ishlatish 
-🔹 Botdan mukkammal va erkin foydalana olish 
-🔹 Eski seryalar o'chmaydi 
-🔹 Premium animelarni tomosha qila olish ( hentai animeni )
-🔹 Homiy kanallarga a'zo bo'lish shart emas
-🔹 AniDuble ni qo'llab quvvatlash</i>
-°•───────────────────
-⚠️Eslatma : AniPass faqat bot uchun amal qiladi 
-⚡️AniPass narxi atiga : 5.000 so'm💵</b>
-"""
-                    await msg.answer_animation(animation=open("media/vip.mp4","rb"),caption=text,reply_markup=vip_buying_clbtn())
+#                     text = f"""
+# <b>Sizdagi 💎Lux kanaldagi obunangizni tugash vaqti :</b> {is_lux[0][0]}
+# -
+# 🔥<b>💫 Aniduble botidan ⚡️ AniPass sotib olganingizdan keyingi qulayliklar
+# °•───────────────────
+# 🎉Qulayliklar 
+# ⚡️ Botni 2x tezlikda ishlatish 
+# 💣 Botdan mukkammal va erkin foydalana olish 
+# 📺 Eski seriyalar o'chmaydi 
+# 📡 Homiy kanallarga a'zo bo'lish shart 
+# emas .
+# 🧨 Botdan sizga qoshimcha reklamalar kelmaydi va bezovta qilmaydi .
+# °•───────────────────
+# 🎟 Qoshiladigan tugmalar 
+# 🖼 Rasm orqali qidiruv
+# 🔃 Tasodifiy anime 
+# 🔸️ Eng ko'p ko'rilgan animelar 
+# 🏮 Janr orqali qidiruv 
+# ⚠️ Eslatma : ⚡️AniPass  faqat bot uchun amal qiladi 
+# ⚡️ AniPass narxi atiga : 5.000 so'm 💵</b>
+# """                     
+#                     print(text)
+#                     await msg.answer_animation(animation=open("media/vip.mp4","rb"),caption=text,reply_markup=vip_buying_clbtn())
 
-               else:
+               # else:
 
-                    text = f"""
-<b>🔥Qaysi turdagi obunani sotib olishni istaysiz ?</b>
-"""
-                    await msg.answer(text,reply_markup=which_vip_clbtn())
+#                     text = f"""
+# <b>🔥Qaysi turdagi obunani sotib olishni istaysiz ?</b>
+# """
+#                     await msg.answer(text,reply_markup=which_vip_clbtn())
 
           elif len(text) > 5:
                anime = search_anime_base(text)
