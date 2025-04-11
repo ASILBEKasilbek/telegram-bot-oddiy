@@ -3,7 +3,7 @@ from .languages import *
 
 def choose_language_clbtn():
     cheker = InlineKeyboardMarkup()
-    cheker.add(InlineKeyboardButton("🇺🇿 O'zbekecha",callback_data=f'select,uz'))
+    cheker.add(InlineKeyboardButton("🇺🇿 O'zbekcha",callback_data=f'select,uz'))
     # cheker.add(InlineKeyboardButton("🇷🇺 Русский",callback_data=f'select,ru')) 
     return cheker
 def search_clbtn():

@@ -48,12 +48,21 @@ class User(StatesGroup):
      tasodifiy= State()
 
 async def check_premium_func(user_id):
-     user = get_user_base(user_id)
-     vip = user[0][5]
-     lux = user[0][6]
+     user = get_user_base(user_id)  # Assuming this function fetches the user data
+     print(user)  # Print the user data for debugging purposes
+     
+     # Ensure 'user' is not empty and contains at least one item
+     if user and len(user) > 0 and len(user[0]) > 5:
+          # Access the 6th element if the list is long enough
+          vip = user[0][5]
+     else:
+          # Handle the case where the list is shorter than expected or data is missing
+          vip = "0"  # Or some other default value
+
+     # lux = user[0][6]
 
      is_vip = "True"
-     is_lux = "True"
+     # is_lux = "True"
      if vip != "0":
           expire_time = datetime.strptime(vip, "%Y-%m-%d")
           now = datetime.now()
@@ -531,7 +540,6 @@ emas .
 
                if is_vip and is_vip[0][0]:
                     expiry_date_str = is_vip[0][0]
-                    print(expiry_date_str)
 
                     # Formatni avtomatik aniqlash
                     try:
