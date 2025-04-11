@@ -19,7 +19,7 @@ vip_buying_chat = -1002099276344
 from dotenv import load_dotenv
 import os
 from datetime import datetime
-
+from dateutil.relativedelta import relativedelta
 
 
 load_dotenv()
@@ -54,12 +54,14 @@ async def check_premium_func(user_id):
 
      is_vip = "True"
      is_lux = "True"
-     
+     if vip != "0":
+          expire_time = datetime.strptime(vip, "%Y-%m-%d")
+          now = datetime.now()
+          if expire_time < now:
+               is_vip = "False"
+               update_user_vip_base(user_id,"0")
      if vip == 0 or vip == "0":
           is_vip = "False"
-
-     if lux == 0 or lux == "0":
-          is_lux = "False"
      else:
           today = datetime.now().strftime("%Y-%m-%d")
           today2 = datetime.strptime(today, "%Y-%m-%d")
@@ -84,27 +86,29 @@ async def check_premium_func(user_id):
                     except:
                          pass
                     is_vip = "False"
+                    update_user_vip_base(user_id,"0")
+
                else:
                     is_vip = "True"
           
-          if is_lux == "True":
-               is_lux_user = datetime.strptime(lux, "%Y-%m-%d")
+          # if is_lux == "True":
+          #      is_lux_user = datetime.strptime(lux, "%Y-%m-%d")
 
-               if today2 >= is_lux_user:
+          #      if today2 >= is_lux_user:
 
-                    update_user_free_lux_base(user_id)
+          #           update_user_free_lux_base(user_id)
 
-                    try:
-                         await dp.bot.kick_chat_member(chat_id=-1002131546047,user_id=user_id)
-                    except:
-                         pass
+          #           try:
+          #                await dp.bot.kick_chat_member(chat_id=-1002131546047,user_id=user_id)
+          #           except:
+          #                pass
 
-                    text = "<b>‼️Sizdagi 💎Lux obuna muddati o'z nihoyasiga yetdi !</b>"
-                    try:
-                         a = await dp.bot.send_message(chat_id=user_id,text=text)
-                         await a.pin()
-                    except:
-                         pass
+          #           text = "<b>‼️Sizdagi 💎Lux obuna muddati o'z nihoyasiga yetdi !</b>"
+          #           try:
+          #                a = await dp.bot.send_message(chat_id=user_id,text=text)
+          #                await a.pin()
+          #           except:
+          #                pass
 
      return is_vip
 
@@ -364,7 +368,6 @@ async def start(msg:types.Message ,state : FSMContext):
      user_id = msg.from_user.id
 
      is_vip = await check_premium_func(user_id)
-     
      if not lang:
           user_id = msg.from_user.id
           user = get_user_base(user_id)
@@ -373,7 +376,10 @@ async def start(msg:types.Message ,state : FSMContext):
                data["lang"] = lang
      
      text = msg.text
-     
+     # if send_expiration_message(user_id) == True:
+     #      is_vip = "True"
+     # else:
+     #      is_vip = "False"
      # if is_vip == "True":
      #      is_sub = True
      # else:
@@ -385,6 +391,31 @@ async def start(msg:types.Message ,state : FSMContext):
      elif text == "💸Reklama va Homiylik" or text == "💸Reklama va Homiylik":
           admin_user_name = get_user_base(6385061330)[0][1]
           await msg.answer(contacting_message(lang,admin_user_name))
+     
+     elif text == "Animelar ro'yhati 📓" or text == "Animelar ro'yhati 📓":
+          animes = get_animes_base()
+     
+          f = open(f"animes_list_{msg.from_user.id}.txt", "a",encoding="utf-8")
+          text = f"""
+AniDuble botidagi Barcha animelar ro'yxati :
+Barcha animelar soni : {len(animes)} ta
+"""       
+          num = 0
+          for i in animes:
+               num += 1
+               text += f"""
+----  {num}  ----
+Anime ID : {i[0]}
+Nomi : [ {i[1]} ]
+Janri : {i[2].replace(","," ")}
+"""
+          f.write(text)
+          f.close()
+
+          document = InputFile(f"animes_list_{msg.from_user.id}.txt")
+
+          await msg.answer_document(document=document,caption="<b>📓AniDuble botidagi barcha animelar ro'yxati</b>")
+          os.remove(f"animes_list_{msg.from_user.id}.txt")
      
      if is_vip == "False":
 
@@ -475,32 +506,6 @@ emas .
                await User.searching.set()
                # await msg.answer("Qaytish uchun /start ni bosing")
 
-          
-          elif text == "Animelar ro'yhati 📓" or text == "Animelar ro'yhati 📓":
-               animes = get_animes_base()
-          
-               f = open(f"animes_list_{msg.from_user.id}.txt", "a",encoding="utf-8")
-               text = f"""
-AniDuble botidagi Barcha animelar ro'yxati :
-Barcha animelar soni : {len(animes)} ta
-"""       
-               num = 0
-               for i in animes:
-                    num += 1
-                    text += f"""
-----  {num}  ----
-Anime ID : {i[0]}
-Nomi : [ {i[1]} ]
-Janri : {i[2].replace(","," ")}
-"""
-               f.write(text)
-               f.close()
-
-               document = InputFile(f"animes_list_{msg.from_user.id}.txt")
-
-               await msg.answer_document(document=document,caption="<b>📓AniDuble botidagi barcha animelar ro'yxati</b>")
-               os.remove(f"animes_list_{msg.from_user.id}.txt")
-          
           elif text == "Ongoing animelar 🧧" or text == "Ongoing animelar 🧧":
                animes = get_animes_ongoing_base()
 
@@ -526,6 +531,7 @@ Janri : {i[2].replace(","," ")}
 
                if is_vip and is_vip[0][0]:
                     expiry_date_str = is_vip[0][0]
+                    print(expiry_date_str)
 
                     # Formatni avtomatik aniqlash
                     try:
@@ -548,9 +554,9 @@ Janri : {i[2].replace(","," ")}
                               f"<b>Qolgan vaqt:</b> {days_left} kun, {hours_left} soat, {minutes_left} daqiqa"
                          )
                     else:
+                         # send_expiration_message(user_id)
                          message = (
                               f"<b>Sizdagi ⚡️AniPass muddati tugagan!</b>\n"
-                              f"Tugash vaqti: {expiry_date_str}"
                          )
                else:
                     message = "<b>Sizda ⚡️AniPass mavjud emas yoki muddati aniqlanmadi.</b>"
@@ -840,9 +846,27 @@ Lux kanalga Echchi va hentai animelar o'zbek tilida joylab boriladi 💎
 """                 
           await call.message.answer_animation(animation=open("media/vip_channel.mp4","rb"),caption=text,reply_markup=vip_channel_clbtn())
 
-async def send_expiration_message(user_id):
-    text = "⚠️ AniPass muddati tugadi! Obunani davom ettirish uchun qayta to'lov qiling."
-    await dp.bot.send_message(user_id, text)
+# async def send_expiration_message(user_id):
+#     is_vip = get_user_is_vip_base(user_id)  # Masalan: [('2025-04-11 12:10:00',)]
+
+#     if is_vip[0][0] == "0":
+#         # Allaqachon tugagan bo‘lsa
+#         text = "⚠️ AniPass muddati tugadi! Obunani davom ettirish uchun qayta to'lov qiling."
+#         await dp.bot.send_message(user_id, text)
+#         return
+
+#     expire_time = datetime.strptime(is_vip[0][0], "%Y-%m-%d %H:%M:%S")
+#     now = datetime.now()
+
+#     if now < expire_time:
+#         return "True"
+#     else:
+#         # Vaqti tugagan
+#         text = "⚠️ AniPass muddati tugadi! Obunani davom ettirish uchun qayta to'lov qiling."
+#         update_user_vip_base(user_id, '0')
+#         User.menu.state()
+#         await dp.bot.send_message(user_id, text)
+
 
 @dp.callback_query_handler(text_contains="free", state=User.menu)
 async def qosh(call: types.CallbackQuery, state: FSMContext):
@@ -856,33 +880,48 @@ async def qosh(call: types.CallbackQuery, state: FSMContext):
      a = await call.message.answer(". . .", reply_markup=user_button_btn(lang,is_vip))
      await a.delete()
      await call.message.delete()
+     if get_free_status(user_id)>0:
+          await call.message.answer(
+                    "Siz allaqachon bepul AniPassni aktivlashtirgansiz",
+                    reply_markup=vip_2nd_buying_clbtn()
+          )
 
-     await call.message.bot.send_message(
-               call.from_user.id,
-               "Siz bepul 5 kunlik AniPassni aktivlashtirishni hohlaysizmi",
-               reply_markup=true_false_link_clbtn()
-     )
+     elif get_free_status(user_id) == 0:
+          await call.message.bot.send_message(
+                    call.from_user.id,
+                    "Siz bepul 5 kunlik AniPassni aktivlashtirishni hohlaysizmi",
+                    reply_markup=true_false_link_clbtn()
+          )
 
 
 
 @dp.callback_query_handler(text_contains="HA", state=User.buying_vip)
 async def qosh(call: types.CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    lang = data.get("lang")
-    is_vip = data.get("vip")
+     data = await state.get_data()
+     lang = data.get("lang")
+     is_vip = data.get("vip")
 
-    await User.buying_vip.set()
-    a = await call.message.answer(". . .", reply_markup=user_button_btn(lang,is_vip))
-    await a.delete()
+     await User.buying_vip.set()
+     a = await call.message.answer(". . .", reply_markup=user_button_btn(lang,is_vip))
+     await a.delete()
+     await call.message.delete()
+     user_id = call.from_user.id
 
-    await call.message.delete()
+     date_1 = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+     date_1 = datetime.strptime(date_1, "%Y-%m-%d %H:%M:%S")
+     result = date_1 + relativedelta(days= +5)
+     result = str(result)[:-9]  # So'nggi sekundlarni olib tashlash
 
-    text = f"""
+     update_free_status(user_id,1)
+     update_user_vip_base(user_id, result)
+
+
+     text = f"""
 ( {call.from_user.username} ) 🎉 Tabriklaymiz siz AniDuble botidan bepul AniPass aktivlashtirdingiz ✅️ 
 
 ⚠️ Eslatma: bu obuna faqat 5 kun amal qiladi. 5 kundan so'ng AniPass avtomatik ravishda bekor bo'ladi.
 """
-    await call.message.answer(text, reply_markup=vip_2nd_buying_clbtn())
+     await call.message.answer(text, reply_markup=vip_2nd_buying_clbtn())
 
 @dp.callback_query_handler(text_contains="Keyinroq", state=User.buying_vip)
 async def qosh(call: types.CallbackQuery, state: FSMContext):

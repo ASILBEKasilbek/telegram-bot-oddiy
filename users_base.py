@@ -18,7 +18,8 @@ def creating_table():
         is_vip TEXT,
         is_lux TEXT,
         is_admin NUMERIC NOT NULL,
-        is_staff NUMERIC NOT NULL
+        is_staff NUMERIC NOT NULL,
+        free NUMERIC DEFAULT 0
     )""")
     
     conn.execute("""CREATE TABLE IF NOT EXISTS anime(
@@ -51,19 +52,8 @@ def creating_table():
     )""")
 
     # 'statistics_new' jadvalini yaratish
-    cursor.execute("""CREATE TABLE IF NOT EXISTS statistics_new (
-        name TEXT UNIQUE, 
-        bot_users INTEGER,
-        anime_count INTEGER,
-        vip_users INTEGER DEFAULT 0,
-        lux_users INTEGER DEFAULT 0,
-        anime_views INTEGER DEFAULT 0,
-        series_count INTEGER DEFAULT 0,
-        active_users INTEGER DEFAULT 0,
-        new_users INTEGER DEFAULT 0,
-        most_watched_anime TEXT DEFAULT 'None',
-        most_active_user TEXT DEFAULT 'None'
-    )""")
+
+    
     conn.commit()
 
 def get_all_statistics():
@@ -401,10 +391,8 @@ def get_random_anime_sql():
     else:
         return "Hech qanday anime topilmadi."
     
-from difflib import SequenceMatcher
 
-from difflib import SequenceMatcher
-
+update_user_vip_base
 def search_anime_base(prompt):
     print("🔍 Kiritilgan prompt:", repr(prompt))
 
@@ -533,8 +521,41 @@ def update_anime_views_base(anime_id):
     cursor.execute(f"""UPDATE anime SET views = views + 1 WHERE anime_id = {anime_id} """)
     conn.commit()
 
-# creating_table()
+creating_table()
 # add_statistics_base()
 
-a = "321"
-print(a.split("serie"))
+def update_free_status(user_id, free_value):
+    try:
+        conn.execute("""
+            UPDATE about_user
+            SET free = ?
+            WHERE user_id = ?
+        """, (free_value, user_id))
+        conn.commit()
+        return f"User {user_id} uchun 'free' qiymati {free_value} ga yangilandi."
+    except Exception as e:
+        return f"Xatolik yuz berdi: {e}"
+
+def get_free_status(user_id):
+    try:
+        cursor = conn.execute("""
+            SELECT free FROM about_user WHERE user_id = ?
+        """, (user_id,))
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+        else:
+            print(f"User {user_id} topilmadi.")
+            return None
+    except Exception as e:
+        print(f"Xatolik yuz berdi: {e}")
+        return None
+def add_column_if_not_exists(conn, table_name, column_name, column_type):
+    cursor = conn.cursor()
+    cursor.execute(f"PRAGMA table_info({table_name})")
+    columns = [info[1] for info in cursor.fetchall()]
+    if column_name not in columns:
+        conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
+        conn.commit()
+
+add_column_if_not_exists(conn, 'about_user', 'free', 'INTEGER DEFAULT 0')

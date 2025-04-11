@@ -96,7 +96,6 @@ async def start(msg:types.Message ,state : FSMContext):
         else:
             await msg.answer("❌",reply_markup=user_button_btn(user[0][2],"False"))
 
-# ==========================================================================================
 @dp.message_handler(content_types=["text"],state=Admin.menu)
 async def start(msg:types.Message ,state : FSMContext):
     text = msg.text
@@ -212,8 +211,6 @@ async def start(msg:types.Message ,state : FSMContext):
         a = await msg.answer("⌛️", reply_markup=back_button_btn())  # Yuklanayotgan xabar
         await a.delete()  # Yuklanayotgan xabarni o'chirish
         await msg.answer("/start ni bosing ✅")  # Asosiy menyuga qaytish
-
-
 
 @dp.message_handler(content_types=["text"],state=Posting.search)
 async def start(msg:types.Message ,state : FSMContext):
@@ -1740,8 +1737,6 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
     await Admin.menu.set()
     await call.message.answer("👔<b>Admin panel</b>",reply_markup=admin_button_btn())
 
-# ==========================================================================================
-# ==========================================================================================
 
 @dp.message_handler(text_contains = "🔙Ortga",state=Add_anime.all_states)
 async def start(msg:types.Message ,state : FSMContext):
@@ -1847,9 +1842,6 @@ async def start(msg:types.Message ,state : FSMContext):
     await state.finish()
     await Admin.menu.set()
     await msg.answer("✅<b>Anime muvaffaqiyatli qo'shildi !</b>",reply_markup=admin_button_btn())
-        
-# ==========================================================================================
-# ==========================================================================================
 
 @dp.message_handler(content_types=["text"],state=[Admin.send_message_to_one,Admin.sending_to_one])
 async def start(msg:types.Message ,state : FSMContext):
@@ -1918,8 +1910,6 @@ async def start(msg:types.Message ,state : FSMContext):
         await Admin.menu.set()
         await msg.answer("👔<b>Admin panel</b>",reply_markup=admin_button_btn())
         
-# ==========================================================================================
-# ==========================================================================================
 @dp.message_handler(content_types=["any"],state=Admin.send_message)
 async def start(msg:types.Message ,state : FSMContext):
     
