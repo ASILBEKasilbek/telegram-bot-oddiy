@@ -182,7 +182,7 @@ async def start(msg:types.Message ,state : FSMContext):
         statistics = get_all_statistics()  # Barcha statistikalarni olish
         print(statistics)
         if statistics:  # Agar ma'lumotlar mavjud bo'lsa
-            bot_users, vip_users, lux_users, total_anime, anime_views, series_count, active_users, new_users, most_watched_anime, most_active_user = statistics
+            bot_users, vip_users, free_users, total_anime, anime_views, series_count, active_users, new_users, most_watched_anime, most_active_user = statistics
 
 
             text = f"""
@@ -190,7 +190,7 @@ async def start(msg:types.Message ,state : FSMContext):
     -----------------------------------------------------
     👥<b>Jami foydalanuvchilar soni :</b> {bot_users}
     🔒<b>VIP foydalanuvchilar soni :</b> {vip_users}
-    ⭐<b>LUX foydalanuvchilar soni :</b> {lux_users}
+    ⭐<b>Tekin vip olgan foydalanuvchilar soni :</b> {free_users}
     🖥<b>Jami animelar soni :</b> {total_anime}
     👀<b>Jami tomoshalar soni :</b> {anime_views}
     📺<b>Jami seriyalar soni :</b> {series_count}

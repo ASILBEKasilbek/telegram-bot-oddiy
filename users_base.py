@@ -52,8 +52,6 @@ def creating_table():
     )""")
 
     # 'statistics_new' jadvalini yaratish
-
-    
     conn.commit()
 
 def get_all_statistics():

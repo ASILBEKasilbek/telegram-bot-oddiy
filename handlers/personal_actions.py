@@ -401,31 +401,20 @@ async def start(msg:types.Message ,state : FSMContext):
           admin_user_name = get_user_base(6385061330)[0][1]
           await msg.answer(contacting_message(lang,admin_user_name))
      
-     elif text == "Animelar ro'yhati 📓" or text == "Animelar ro'yhati 📓":
-          animes = get_animes_base()
-     
-          f = open(f"animes_list_{msg.from_user.id}.txt", "a",encoding="utf-8")
-          text = f"""
-AniDuble botidagi Barcha animelar ro'yxati :
-Barcha animelar soni : {len(animes)} ta
-"""       
+     elif text == "Ongoing animelar 🧧" or text == "Ongoing animelar 🧧":
+          animes = get_animes_ongoing_base()
+
+          text = "<b>Ongoing animelar 🧧</b> \n°•───────────────────\n"
+
           num = 0
+          
           for i in animes:
                num += 1
-               text += f"""
-----  {num}  ----
-Anime ID : {i[0]}
-Nomi : [ {i[1]} ]
-Janri : {i[2].replace(","," ")}
-"""
-          f.write(text)
-          f.close()
+               bot='ANIDUBLE_RASMIY_BOT'
+               text += f"<b>{num}.</b> [ <a href='https://t.me/{bot}?start={i[0]}'>{i[1]}</a> ]\n"
 
-          document = InputFile(f"animes_list_{msg.from_user.id}.txt")
+          await msg.answer(text)
 
-          await msg.answer_document(document=document,caption="<b>📓AniDuble botidagi barcha animelar ro'yxati</b>")
-          os.remove(f"animes_list_{msg.from_user.id}.txt")
-     
      if is_vip == "False":
 
           if text == "Tasodifiy anime":
@@ -515,25 +504,35 @@ emas .
                await User.searching.set()
                # await msg.answer("Qaytish uchun /start ni bosing")
 
-          elif text == "Ongoing animelar 🧧" or text == "Ongoing animelar 🧧":
-               animes = get_animes_ongoing_base()
-
-               text = "<b>Ongoing animelar 🧧</b> \n°•───────────────────\n"
-
-               num = 0
-               
-               for i in animes:
-                    num += 1
-                    bot='ANIDUBLE_RASMIY_BOT'
-                    text += f"<b>{num}.</b> [ <a href='https://t.me/{bot}?start={i[0]}'>{i[1]}</a> ]\n"
-
-               await msg.answer(text)
-
           elif text == "Tasodifiy anime":
                await msg.answer("Tasodifiy anime tugmasini bosing")
                await User.tasodifiy.set()
                
+          elif text == "Animelar ro'yhati 📓" or text == "Animelar ro'yhati 📓":
+               animes = get_animes_base()
+          
+               f = open(f"animes_list_{msg.from_user.id}.txt", "a",encoding="utf-8")
+               text = f"""
+     AniDuble botidagi Barcha animelar ro'yxati :
+     Barcha animelar soni : {len(animes)} ta
+     """       
+               num = 0
+               for i in animes:
+                    num += 1
+                    text += f"""
+     ----  {num}  ----
+     Anime ID : {i[0]}
+     Nomi : [ {i[1]} ]
+     Janri : {i[2].replace(","," ")}
+     """
+               f.write(text)
+               f.close()
 
+               document = InputFile(f"animes_list_{msg.from_user.id}.txt")
+
+               await msg.answer_document(document=document,caption="<b>📓AniDuble botidagi barcha animelar ro'yxati</b>")
+               os.remove(f"animes_list_{msg.from_user.id}.txt")
+               await msg.answer("AniDuble botidagi barcha animelar ro'yxati",reply_markup=user_button_btn(lang,is_vip))     
 
           elif text == "⚡️AniPass":
                is_vip = get_user_is_vip_base(user_id)
