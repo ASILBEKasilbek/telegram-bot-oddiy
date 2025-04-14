@@ -322,5 +322,5 @@ def serie_post_link_clbtn(anime_id):
 
 def true_false_link_clbtn():
     cheker = InlineKeyboardMarkup()
-    cheker.add(InlineKeyboardButton("HA",callback_data=f'HA'),InlineKeyboardButton("Keyinroq",callback_data=f"Keyinroq"))   
+    cheker.add(InlineKeyboardButton("✅️ Ha",callback_data=f'HA'),InlineKeyboardButton("❌️ Yo'q",callback_data=f"Keyinroq"))   
     return cheker

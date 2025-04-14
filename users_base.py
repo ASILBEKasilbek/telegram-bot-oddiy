@@ -44,28 +44,153 @@ def creating_table():
         serie_num INTEGER NOT NULL,
         quality TEXT
     )""")
-    
+
     conn.execute("""CREATE TABLE IF NOT EXISTS sponsor(
         channel_id INTEGER, 
         name TEXT,
         link TEXT
     )""")
+    
+    conn.execute("""CREATE TABLE IF NOT EXISTS statistics_new2(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT,
+            total_users INTEGER DEFAULT 0,
+            active_users INTEGER DEFAULT 0,
+            new_users_today INTEGER DEFAULT 0,
+            total_vip_users INTEGER DEFAULT 0,
+            blocked_users INTEGER DEFAULT 0,
+            total_free_users INTEGER DEFAULT 0,
+            total_anipass_users INTEGER DEFAULT 0,
+            total_anime INTEGER DEFAULT 0,
+            total_series INTEGER DEFAULT 0,
+            total_views INTEGER DEFAULT 0,
+            anime_views INTEGER DEFAULT 0,
+            series_views INTEGER DEFAULT 0,
+            sponsors_count INTEGER DEFAULT 0,
+            top_anime_id INTEGER,
+            updated_at TEXT
+    )""")
+    
+   
+    # cursor.execute("ALTER TABLE about_user ADD COLUMN is_blocked NUMERIC DEFAULT 0")
+    # cursor.execute("ALTER TABLE about_user ADD COLUMN anipass NUMERIC DEFAULT 0")
+    # cursor.execute("ALTER TABLE statistics_new ADD COLUMN date TEXT")
+    # cursor.execute("PRAGMA table_info(about_user)")
+    # columns = cursor.fetchall()
+    # print(columns)  # Jadvaldagi barcha ustunlarni ko‘rsatadi
+
+
 
     # 'statistics_new' jadvalini yaratish
     conn.commit()
+def update_statistics():
+    today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    # total users
+    cursor.execute("SELECT COUNT(*) FROM about_user")
+    total_users = cursor.fetchone()[0]
+
+    # active users (misol uchun: so‘nggi 24 soat ichida free > 0 bo‘lganlar)
+    cursor.execute("SELECT COUNT(*) FROM about_user WHERE free > 0")
+    active_users = cursor.fetchone()[0]
+
+    # new users today (user_id raqamidan kelib chiqib bugun qo‘shilganlarni aniqlash uchun, real loyihada date ustuni bo‘lishi kerak edi)
+    # Hozircha misol sifatida so‘nggi 24 soat ichida free > 0 bo‘ganlarni olamiz
+    cursor.execute("SELECT COUNT(*) FROM about_user WHERE free > 0")
+    new_users_today = cursor.fetchone()[0]
+
+    # total vip users
+    cursor.execute("SELECT COUNT(*) FROM about_user WHERE is_vip != 0")
+    total_vip_users = cursor.fetchone()[0]
+
+
+    # blocked users
+    cursor.execute("SELECT COUNT(*) FROM about_user WHERE is_blocked = 1")
+    blocked_users = cursor.fetchone()[0]
+
+    # total free users
+    cursor.execute("SELECT COUNT(*) FROM about_user WHERE free > 0")
+    total_free_users = cursor.fetchone()[0]
+
+    # total anipass users
+    cursor.execute("SELECT COUNT(*) FROM about_user WHERE is_vip != 0")
+    total_anipass_users = cursor.fetchone()[0]
+
+    # total anime
+    cursor.execute("SELECT COUNT(*) FROM anime")
+    total_anime = cursor.fetchone()[0]
+
+    # total series
+    cursor.execute("SELECT COUNT(*) FROM series")
+    total_series = cursor.fetchone()[0]
+
+    # total views
+    cursor.execute("SELECT SUM(views) FROM anime")
+    total_views = cursor.fetchone()[0] or 0
+
+    # anime views (bir xil total_views bo‘ladi hozir)
+    anime_views = total_views
+
+    # series views (hozircha track qilinmagan, 0 qilamiz)
+    series_views = 0
+
+    # sponsors count
+    cursor.execute("SELECT COUNT(*) FROM sponsor")
+    sponsors_count = cursor.fetchone()[0]
+
+    # top anime (eng ko‘p ko‘rilgan anime)
+    cursor.execute("SELECT anime_id FROM anime ORDER BY views DESC LIMIT 1")
+    result = cursor.fetchone()
+    top_anime_id = result[0] if result else None
+
+    # yozish
+    cursor.execute("""
+        INSERT INTO statistics_new2 (
+            date, total_users, active_users, new_users_today, total_vip_users, blocked_users, 
+            total_free_users, total_anipass_users, total_anime, total_series, total_views, 
+            anime_views, series_views, sponsors_count, top_anime_id, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        today, total_users, active_users, new_users_today, total_vip_users, blocked_users,
+        total_free_users, total_anipass_users, total_anime, total_series, total_views,
+        anime_views, series_views, sponsors_count, top_anime_id, today
+    ))
+
+
+    conn.commit()
+    print("✅ Statistika yangilandi!")
+
+# def get_all_statistics():
+#     cursor.execute("""SELECT * FROM statistics_new WHERE name = 'AniDuble'""")
+#     data = cursor.fetchall()
+
+#     # Agar ma'lumotlar mavjud bo'lsa, qaytarish
+#     print(data)
+#     if data:
+#         print(f"Ma'lumotlar mavjud: {data[0]}")
+#         return data[0]  # Birinchi qatorni qaytaradi
+#     else:
+#         print("Ma'lumotlar mavjud emas.")
+#         return None
 def get_all_statistics():
-    cursor.execute("""SELECT * FROM statistics_new WHERE name = 'AniDuble'""")
-    data = cursor.fetchall()
+    # Eng so'nggi statistik ma'lumotlarni olish
+    cursor.execute("SELECT total_users, total_vip_users, total_free_users, total_anime, total_views, total_series, active_users, new_users_today, top_anime_id, updated_at FROM statistics_new2 ORDER BY id DESC LIMIT 1")
+    latest_stats = cursor.fetchone()
 
-    # Agar ma'lumotlar mavjud bo'lsa, qaytarish
-    print(data)
-    if data:
-        print(f"Ma'lumotlar mavjud: {data[0]}")
-        return data[0]  # Birinchi qatorni qaytaradi
-    else:
-        print("Ma'lumotlar mavjud emas.")
-        return None
+    if latest_stats:
+        total_users, total_vip_users, total_free_users, total_anime, total_views, total_series, active_users, new_users_today, top_anime_id, updated_at = latest_stats
+
+        # Top anime nomini olish (agar mavjud bo'lsa)
+        if top_anime_id:
+            cursor.execute("SELECT name FROM anime WHERE anime_id = ?", (top_anime_id,))
+            result = cursor.fetchone()  # Natijani saqlash
+            most_watched_anime = result[0] if result else "Noma'lum"
+        else:
+            most_watched_anime = "Ma'lumot yo'q"
+
+        return (total_users, total_vip_users, total_free_users, total_anime, total_views, total_series, active_users, new_users_today, most_watched_anime, None)  # eng faol foydalanuvchi hali yo'q
+
+    return None
 
 def get_random_anime():
     cursor.execute("SELECT * FROM anime")
@@ -390,21 +515,14 @@ def get_random_anime_sql():
         return "Hech qanday anime topilmadi."
     
 
-update_user_vip_base
 def search_anime_base(prompt):
-    print("🔍 Kiritilgan prompt:", repr(prompt))
-
     query = "SELECT * FROM anime WHERE 1=1"
     parameters = []
-
     prompt = prompt.strip()
     is_int = prompt.isdigit()
     is_bool = prompt.lower() in ["true", "false"]
     is_lang = prompt.lower() in ["uz", "ru", "jp", "en"]
     is_status = prompt.lower() in ["ongoing", "completed", "paused"]
-
-    print(f"📊 Turi aniqlandi: is_int={is_int}, is_bool={is_bool}, is_lang={is_lang}, is_status={is_status}")
-
     if is_int:
         query += " AND anime_id = ?"
         parameters.append(int(prompt))
@@ -421,30 +539,21 @@ def search_anime_base(prompt):
         query += " AND (name LIKE ? OR genre LIKE ?)"
         parameters.append(f"%{prompt}%")
         parameters.append(f"%{prompt}%")
-
-    print("📝 SQL so‘rov:", query)
-    print("📦 Parametrlar:", parameters)
-
     # SQL so‘rovni bajarish
     try:
         cursor.execute(query, parameters)
         results = cursor.fetchall()
         print(f"📥 SQL natija soni: {len(results)}")
     except Exception as e:
-        print("❌ SQL xatolik:", e)
         return []
-
     # 🛠️ is_int va boshqalar bo‘lsa similarity kerak emas
     if is_int or is_bool or is_lang or is_status:
-        print(f"✅ Yakuniy natijalar: {len(results)} ta topildi. (similarity yo‘q)")
         return results
 
     # 🔍 Similarity funksiyasi (faqat name/genre uchun)
     def similar(a, b):
         return SequenceMatcher(None, a.lower(), b.lower()).ratio()
-
     similar_anime = []
-
     for row in results:
         name_similarity = similar(prompt, row[3])  # row[3] = name
         if name_similarity >= 0.7:
@@ -455,7 +564,6 @@ def search_anime_base(prompt):
                 similar_anime.append(row)
                 break
 
-    print(f"✅ Yakuniy natijalar: {len(similar_anime)} ta topildi.")
     return similar_anime
 
 
@@ -557,3 +665,7 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
         conn.commit()
 
 add_column_if_not_exists(conn, 'about_user', 'free', 'INTEGER DEFAULT 0')
+add_column_if_not_exists(conn, 'about_user', 'is_blocked', 'INTEGER DEFAULT 0')
+
+creating_table() # avval jadval yaratish
+update_statistics()  # statistika yozish

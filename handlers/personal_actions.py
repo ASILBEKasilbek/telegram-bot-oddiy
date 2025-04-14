@@ -450,31 +450,34 @@ Lux kanalga Echchi va hentai animelar o'zbek tilida joylab boriladi 💎
 """                 
                     await msg.answer_animation(animation=open("media/vip_channel.mp4","rb"),caption=text,reply_markup=vip_channel_clbtn())
                     
-               elif is_vip[0][0] == "0" and is_lux[0][0] != "0":
+#                elif is_vip[0][0] == "0" and is_lux[0][0] != "0":
 
-                    text = f"""
-<b>Sizdagi 💎Lux kanaldagi obunangizni tugash vaqti :</b> {is_lux[0][0]}
--
-🔥<b>💫 Aniduble botidan ⚡️ AniPass sotib olganingizdan keyingi qulayliklar
-°•───────────────────
-🎉Qulayliklar 
-⚡️ Botni 2x tezlikda ishlatish 
-💣 Botdan mukkammal va erkin foydalana olish 
-📺 Eski seriyalar o'chmaydi 
-📡 Homiy kanallarga a'zo bo'lish shart 
-emas .
-🧨 Botdan sizga qoshimcha reklamalar kelmaydi va bezovta qilmaydi .
-°•───────────────────
-🎟 Qoshiladigan tugmalar 
-🖼 Rasm orqali qidiruv
-🔃 Tasodifiy anime 
-🔸️ Eng ko'p ko'rilgan animelar 
-🏮 Janr orqali qidiruv 
-⚠️ Eslatma : ⚡️AniPass  faqat bot uchun amal qiladi 
-⚡️ AniPass narxi atiga : 5.000 so'm 💵</b>
-"""
-                    print(text)
-                    await msg.answer_animation(animation=open("media/vip.mp4","rb"),caption=text,reply_markup=vip_buying_clbtn())
+#                     text = f"""
+# <b>Sizdagi 💎Lux kanaldagi obunangizni tugash vaqti :</b> {is_lux[0][0]}
+# -
+# 💫 Aniduble botidan ⚡️ AniPass sotib olganingizdan keyingi qulayliklar
+# °•───────────────────
+# 🎉 Qulayliklar 
+
+# 🔹️ Botni 2x tezlikda ishlatish 
+# 🔹️ Botdan mukkammal va erkin foydalana olish 
+# 🔹️ Eski seriyalar o'chmaydi 
+# 🔹️ Homiy kanallarga a'zo bo'lish shart 
+# emas .
+# 🔹️ Botdan sizga qoshimcha reklamalar kelmaydi va bezovta qilmaydi .
+# °•───────────────────
+# 🎟  Qo'shiladigan tugmalar 
+
+# 🔹️ Rasm orqali qidiruv
+# 🔹️ Tasodifiy anime 
+# 🔹️ Eng ko'p ko'rilgan animelar 
+# 🔹️ Janr orqali qidiruv 
+
+# ⚠️ Eslatma : ⚡️AniPass faqat bot uchun amal qiladi 
+# ⚡️ AniPass narxi atiga : 5.000 so'm 💵
+# """
+#                     print(text)
+#                     await msg.answer_animation(animation=open("media/vip.mp4","rb"),caption=text,reply_markup=vip_buying_clbtn())
 
                else:
 
@@ -672,7 +675,7 @@ async def start(call: types.CallbackQuery,state : FSMContext):
      # is_vip_user = (await state.get_data()).get("vip")
 
      await call.message.delete()
-     await call.message.answer("🔍 Anime nomini yoki KOD ni yuboring",reply_markup=back_user_button_btn(lang))
+     await call.message.answer("🔍Qidirish uchun anime nomi yoki ID sini yuboring !",reply_markup=back_user_button_btn(lang))
      await User.searching.set()
      await call.answer("Qaytish uchun /start ni bosing")
 
@@ -825,19 +828,26 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
      await call.message.delete()
 
      if vip_type == "vip":
-          text = f"""
-🔥<b>AniDuble botidan ⚡️AniPass sotib olganingizdan keyingi qulayliklar<i>
-°•───────────────────
-🔹 Botni 2x tezlikda ishlatish 
-🔹 Botdan mukkammal va erkin foydalana olish 
-🔹 Eski seryalar o'chmaydi 
-🔹 Premium animelarni tomosha qila olish ( hentai animeni )
-🔹 Homiy kanallarga a'zo bo'lish shart emas
-🔹 AniDuble ni qo'llab quvvatlash</i>
-°•───────────────────
-⚠️Eslatma : AniPass faqat bot uchun amal qiladi 
-⚡️AniPass narxi atiga : 5.000 so'm💵</b>
-"""
+          text = (
+    "💫 <b>Aniduble botidan ⚡️ AniPass</b> sotib olganingizdan keyingi qulayliklar:\n"
+    "°•───────────────────\n"
+    "🎉 <b>Qulayliklar</b>\n\n"
+    "🔹️ Botni 2x tezlikda ishlatish\n"
+    "🔹️ Botdan mukammal va erkin foydalana olish\n"
+    "🔹️ Eski seriyalar o'chmaydi\n"
+    "🔹️ Homiy kanallarga a'zo bo‘lish shart emas\n"
+    "🔹️ Botdan sizga qo‘shimcha reklamalar kelmaydi va bezovta qilmaydi\n"
+    "°•───────────────────\n"
+    "🎟 <b>Qo‘shiladigan tugmalar</b>\n\n"
+    "🔹️ Rasm orqali qidiruv\n"
+    "🔹️ Tasodifiy anime\n"
+    "🔹️ Eng ko‘p ko‘rilgan animelar\n"
+    "🔹️ Janr orqali qidiruv\n\n"
+    "⚠️ <i>Eslatma:</i>\n"
+    "⚡️ AniPass faqat bot uchun amal qiladi\n"
+    "⚡️ AniPass narxi atiga: <b>5.000 so‘m 💵</b>"
+)
+
           await call.message.answer_animation(animation=open("media/vip.mp4","rb"),caption=text,reply_markup=vip_buying_clbtn())
 
      else:
@@ -889,14 +899,15 @@ async def qosh(call: types.CallbackQuery, state: FSMContext):
      await call.message.delete()
      if get_free_status(user_id)>0:
           await call.message.answer(
-                    "Siz allaqachon bepul AniPassni aktivlashtirgansiz",
+                    f"""({call.from_user.username} ) 😕 Foydalanuvchi siz uchun 5 kun tekin AniPass obunasi o'z nihoyasiga yetdi 
+🎉 Agar siz AniPass sotib olishni hohlasangiz pastdagi 💸 Sotib olish tugmasini bosing""",
                     reply_markup=vip_2nd_buying_clbtn()
           )
 
      elif get_free_status(user_id) == 0:
           await call.message.bot.send_message(
                     call.from_user.id,
-                    "Siz bepul 5 kunlik AniPassni aktivlashtirishni hohlaysizmi",
+                    "🔹️ Siz haqiqatdan ham free AniPass ni faollashtirmoqchimiz ?",
                     reply_markup=true_false_link_clbtn()
           )
 
@@ -923,12 +934,15 @@ async def qosh(call: types.CallbackQuery, state: FSMContext):
      update_user_vip_base(user_id, result)
 
 
-     text = f"""
-( {call.from_user.username} ) 🎉 Tabriklaymiz siz AniDuble botidan bepul AniPass aktivlashtirdingiz ✅️ 
-
-⚠️ Eslatma: bu obuna faqat 5 kun amal qiladi. 5 kundan so'ng AniPass avtomatik ravishda bekor bo'ladi.
-"""
-     await call.message.answer(text, reply_markup=vip_2nd_buying_clbtn())
+     text = (
+    f"🎉 <b>{call.from_user.username}</b>!\n\n"
+    "🎊 <b>Tabriklaymiz!</b> Siz <b>AniDuble</b> botidan tekinga <b>AniPass</b> aktivlashtirdingiz ✅️\n\n"
+    "⚠️ <i>Eslatma:</i>\n"
+    "Bu obuna faqat <b>5 kun</b> amal qiladi.\n"
+    "5 kundan so‘ng <b>AniPass</b> avtomatik tarzda bekor bo‘ladi.\n\n"
+    "Atigi oyiga <b>5 000 so‘m</b> to‘lab yana o‘sha imkonyatlardan bemalol foydalanishingiz mumkin 🎥✨"
+)
+     await call.message.answer(text, reply_markup=vip_2nd_buying_clbtn(),parse_mode="HTML")
 
 @dp.callback_query_handler(text_contains="Keyinroq", state=User.buying_vip)
 async def qosh(call: types.CallbackQuery, state: FSMContext):

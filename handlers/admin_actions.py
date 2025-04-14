@@ -179,11 +179,9 @@ async def start(msg:types.Message ,state : FSMContext):
         else:
             await msg.answer("😕<b>Bu faqat Adminlar uchun</b>")
     elif text == "📊Statik ma'lumotlar":
-        statistics = get_all_statistics()  # Barcha statistikalarni olish
-        print(statistics)
-        if statistics:  # Agar ma'lumotlar mavjud bo'lsa
+        statistics = get_all_statistics()
+        if statistics:
             bot_users, vip_users, free_users, total_anime, anime_views, series_count, active_users, new_users, most_watched_anime, most_active_user = statistics
-
 
             text = f"""
     <b>📊AniDuble botining statistikasi :</b>
@@ -194,18 +192,15 @@ async def start(msg:types.Message ,state : FSMContext):
     🖥<b>Jami animelar soni :</b> {total_anime}
     👀<b>Jami tomoshalar soni :</b> {anime_views}
     📺<b>Jami seriyalar soni :</b> {series_count}
-    🚀<b>Oxirgi 24 soatda faol foydalanuvchilar :</b> {active_users}
-    ➕<b>Oxirgi 7 kunda yangi foydalanuvchilar :</b> {new_users}
+    ➕<b>Oxirgi 24 soatda yangi foydalanuvchilar :</b> {new_users}
     🎬<b>Eng ko‘p tomosha qilingan anime :</b> {most_watched_anime if most_watched_anime else "Ma'lumot yo'q"}
-    🏆<b>Eng faol foydalanuvchi ID :</b> {most_active_user if most_active_user else "Ma'lumot yo'q"}
     -----------------------------------------------------
     """
 
-            await msg.answer(text, parse_mode='HTML')  # HTML formatida javob yuborish
+            await msg.answer(text, parse_mode='HTML')
         else:
             text = "<b>Statistika ma'lumotlari topilmadi!</b>"
-            await msg.answer(text, parse_mode='HTML')  # Xatolik holatida xabar
-
+            await msg.answer(text, parse_mode='HTML')
     elif text == "🔙Chiqish":
         await state.finish()  # State ni tugatish
         a = await msg.answer("⌛️", reply_markup=back_button_btn())  # Yuklanayotgan xabar

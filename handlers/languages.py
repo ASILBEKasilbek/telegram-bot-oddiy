@@ -123,11 +123,8 @@ def about_bot_message(lang,user_id):
 -
 🔍<b>Anime Qidirish</b> - Botda mavjud bo'lgan animelarni qidirish uchun ishlatiladi. 
 💸<b>Reklama va Homiylik</b> - bot adminlari bilan reklama yoki homiylik yuzasidan aloqaga chiqish.
-📓<b>Animelar ro'yhati</b> - Botga joylangan animelar ro'yhati .
 🧧<b>Ongoing animelar</b> - Yangi chiqayotgan animelar ro'yhati .
-🏙<b>Rasm orqali qidiruv</b> - Nomini topa olmayotgan animeingizni rasm orqali topib beradi  .
 ⚡️<b>AniPass</b> - Botdan erkin foydalana olish imkonyatini beradi  .
-💎<b>Lux obuna</b> - O'zbekcha hentailar kanalini uchun obuna .
 -
 🧑‍💻<b>Admin</b> - @Aniduble_admin
 -
