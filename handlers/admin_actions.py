@@ -187,13 +187,13 @@ async def start(msg:types.Message ,state : FSMContext):
     <b>📊AniDuble botining statistikasi :</b>
     -----------------------------------------------------
     👥<b>Jami foydalanuvchilar soni :</b> {bot_users}
-    🔒<b>VIP foydalanuvchilar soni :</b> {vip_users}
+    🔒<b>VIP foydalanuvchilar soni :</b> {vip_users-free_users}
     ⭐<b>Tekin vip olgan foydalanuvchilar soni :</b> {free_users}
     🖥<b>Jami animelar soni :</b> {total_anime}
     👀<b>Jami tomoshalar soni :</b> {anime_views}
     📺<b>Jami seriyalar soni :</b> {series_count}
     ➕<b>Oxirgi 24 soatda yangi foydalanuvchilar :</b> {new_users}
-    🎬<b>Eng ko‘p tomosha qilingan anime :</b> {most_watched_anime if most_watched_anime else "Ma'lumot yo'q"}
+    🎬<b>Eng ko'p tomosha qilingan anime :</b> {most_watched_anime if most_watched_anime else "Ma'lumot yo'q"}
     -----------------------------------------------------
     """
 

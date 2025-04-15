@@ -401,7 +401,7 @@ async def start(msg:types.Message ,state : FSMContext):
           admin_user_name = get_user_base(6385061330)[0][1]
           await msg.answer(contacting_message(lang,admin_user_name))
      
-     elif text == "Ongoing animelar 🧧" or text == "Ongoing animelar 🧧":
+     elif text == "🧧 Ongoing animelar" or text == "Ongoing animelar 🧧":
           animes = get_animes_ongoing_base()
 
           text = "<b>Ongoing animelar 🧧</b> \n°•───────────────────\n"
