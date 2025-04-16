@@ -70,6 +70,7 @@ class Posting(StatesGroup):
     video = State()
     check = State()
     add_anime = State()
+    chat_id = State()
 
 class PostingSerie(StatesGroup):
     search = State()
@@ -118,7 +119,6 @@ async def start(msg:types.Message ,state : FSMContext):
         await state.finish()
         await Posting.search.set()
         await msg.answer("<b>🔍Kanalga post qilinishi kerak bo'lgan animeni nomini kiriting</b>",reply_markup=back_button_btn())
-
     elif text == "🎞Seriani post qilish":
         await state.finish()
         await PostingSerie.search.set()
@@ -583,6 +583,35 @@ async def start(msg:types.Message ,state : FSMContext):
     photo = InputFile(path_output)
     await msg.answer_photo(photo=photo,caption=caption,reply_markup=serie_posting_action_clbtn())
     
+
+
+@dp.message_handler(state=Posting.chat_id)
+async def get_chat_id(msg: types.Message, state: FSMContext):
+    try:
+        chat_id = msg.text.strip()
+        data = await state.get_data()
+        anime_id = data.get("anime_id")
+
+        caption = data.get("caption")
+        photo_path = data.get("photo_path")
+        a = data.get("loading_msg")
+
+        await dp.bot.send_photo(
+            chat_id=chat_id,
+            photo=InputFile(photo_path),
+            caption=caption,
+            reply_markup=serie_post_link_clbtn(anime_id)
+        )
+
+        os.remove(photo_path)
+        await dp.bot.delete_message(msg.chat.id, a)
+        await state.finish()
+        await Admin.menu.set()
+        await msg.answer("<b>✅Po'st qilindi</b>", reply_markup=admin_button_btn())
+
+    except Exception as e:
+        await msg.reply(f"❌ Xatolik: {e}")
+
 @dp.callback_query_handler(text_contains = "select",state=PostingSerie.action)
 async def qosh(call: types.CallbackQuery,state : FSMContext):
 
@@ -614,18 +643,42 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
 📑 <b>Janri :</b> {genre}
 🌐 <b>Tili :</b> {language}
 """
+        
+        photo_path = "handlers/post_media/output.jpg"
 
-        photo = InputFile("handlers/post_media/output.jpg")
+        async with state.proxy() as data:
+            data["anime_id"] = anime_id
+            data["caption"] = caption
+            data["photo_path"] = photo_path
+            data["loading_msg"] = a.message_id
 
-        await dp.bot.send_photo(chat_id=-1002023259288,photo=photo,caption=caption,reply_markup=serie_post_link_clbtn(anime_id))
-        os.remove("handlers/post_media/output.jpg")
+        # photo = InputFile("handlers/post_media/output.jpg")
 
-        await a.delete()
-        await state.finish()
-        await Admin.menu.set()
-        await call.message.answer("<b>✅Po'st qilindi</b>",reply_markup=admin_button_btn())
+        # @dp.message_handler()
+        # async def get_chat_id(msg: types.Message):
+        #     try:
+        #         chat_id = msg.text.strip()
 
+        #         await dp.bot.send_photo(
+        #             chat_id=chat_id,
+        #             photo=photo,
+        #             caption=caption,
+        #             reply_markup=serie_post_link_clbtn(anime_id)
+        #         )
+        #         os.remove("handlers/post_media/output.jpg")
 
+        #         await a.delete()
+        #         await state.finish()
+        #         await Admin.menu.set()
+        #         await call.message.answer("<b>✅Po'st qilindi</b>",reply_markup=admin_button_btn())
+
+        #     except:
+        #         await msg.reply("❌ Xatolik")
+
+        # chat_id=-1002023259288
+        # await dp.bot.send_photo(chat_id=chat_id,photo=photo,caption=caption,reply_markup=serie_post_link_clbtn(anime_id))
+        await call.message.reply("Kanal id yoki linkini kiriting (masalan: -1002023259288 yoki @kanal_nomi):")
+        await Posting.chat_id.set()
     else:
         await state.finish()
         await Admin.menu.set()
