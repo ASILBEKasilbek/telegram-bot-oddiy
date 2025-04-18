@@ -488,9 +488,10 @@ Lux kanalga Echchi va hentai animelar o'zbek tilida joylab boriladi 💎
          
           elif text == "🔍Anime Qidirish":
                await msg.answer(
-                    "🔍Qidirish uchun anime nomi yoki ID sini yuboring !",
-                    reply_markup=back_button_btn()
-                    )
+                    "<b>🔍 Qidirish uchun anime nomi yoki ID sini yuboring!</b>",
+                    reply_markup=back_button_btn(),
+                    parse_mode="HTML"
+               )
 
                await User.searching.set()
      
@@ -503,12 +504,12 @@ Lux kanalga Echchi va hentai animelar o'zbek tilida joylab boriladi 💎
           #      await msg.answer(text,reply_markup=back_user_button_btn(lang))
           
           if text == "🔍Anime Qidirish" or text == "🔍Запросить аниме":
-               await msg.answer("Qidiruv turini tanlang!",reply_markup=search_clbtn())
+               await msg.answer("<b>Qidiruv turini tanlang!</b>",reply_markup=search_clbtn(),parse_mode="HTML")
                await User.searching.set()
                # await msg.answer("Qaytish uchun /start ni bosing")
 
           elif text == "Tasodifiy anime":
-               await msg.answer("Tasodifiy anime tugmasini bosing")
+               await msg.answer("<b>Tasodifiy anime tugmasini bosing<b>",parse_mode="HTML")
                await User.tasodifiy.set()
                
           elif text == "Animelar ro'yhati 📓" or text == "Animelar ro'yhati 📓":

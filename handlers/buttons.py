@@ -34,6 +34,9 @@ def admin_button_btn():
     cheker.add(KeyboardButton("💬Xabar yuborish"),KeyboardButton("👤Alohida xabar"))
     cheker.add(KeyboardButton("🔐Majburiy a'zo"),KeyboardButton("👔Staff qo'shish"))
     cheker.add(KeyboardButton("👁‍🗨Post qilish"),KeyboardButton("🎞Seriani post qilish"))
+    cheker.add(KeyboardButton("Qismli post"))
+    cheker.add(KeyboardButton("Kanal qo'shish"),KeyboardButton("Kanal o'chirish"))
+    cheker.add(KeyboardButton("Kanallar"))
     cheker.add(KeyboardButton("🔙Chiqish"))
     cheker.resize_keyboard = True  
     

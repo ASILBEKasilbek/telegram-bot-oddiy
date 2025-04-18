@@ -48,6 +48,14 @@ def post_watching_clbtn(anime_id,anime_list):
         
     return cheker
 
+def create_channel_buttons(channels):
+    keyboard = InlineKeyboardMarkup(row_width=1)
+    for channel in channels:
+        channel_name = channel[1]  # Kanal nomi
+        channel_link = channel[2]  # Kanal havolasi
+        button = InlineKeyboardButton(channel_name, callback_data=f"select_channel,{channel_link}")
+        keyboard.add(button)
+    return keyboard
 def admin_check_clbtn(data1 = None,data2 = None,data3 = None):
     cheker = InlineKeyboardMarkup()
     cheker.add(InlineKeyboardButton("✅Ha",callback_data=f'select,yeah,{data1},{data2},{data3}'),InlineKeyboardButton("❌Yo'q",callback_data=f'select,nope,{data1},{data2},{data3}')) 

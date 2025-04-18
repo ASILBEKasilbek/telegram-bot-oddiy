@@ -70,8 +70,146 @@ class Posting(StatesGroup):
     video = State()
     check = State()
     add_anime = State()
-    chat_id = State()
+    qismli_post = State()
+    select_anime = State()
+    select_series = State()
+    select_channel = State()
 
+# Qismli post boshlash
+@dp.message_handler(lambda msg: msg.text == "Qismli post", state="*")
+async def qismli_post_start(msg: types.Message, state: FSMContext):
+    await state.finish()
+    await Posting.select_anime.set()
+    await msg.answer("Qaysi animeni qismini post qilamiz?", reply_markup=back_button_btn())
+
+# Anime tanlash
+@dp.message_handler(content_types=["text"], state=Posting.select_anime)
+async def select_anime_for_post(msg: types.Message, state: FSMContext):
+    anime_name = msg.text.strip()
+    if anime_name == "⬅️ Orqaga":
+        await state.finish()
+        await msg.answer("Bosh menyuga qaytildi.", reply_markup=admin_button_btn())
+        return
+    
+    # Animenni bazadan izlash
+    anime_data = search_anime_base(anime_name)
+    
+    if not anime_data:
+        await msg.answer("Bunday anime topilmadi. Iltimos, boshqa nom kiriting yoki tekshiring.", reply_markup=back_button_btn())
+        return
+    
+    # Birinchi topilgan animeni olamiz
+    anime = anime_data[0]
+    anime_id = anime[0]  # anime_id
+    await state.update_data(anime_id=anime_id, anime_name=anime[3])  # anime nomini saqlaymiz
+    
+    # Animenning seriyalarini olish
+    series = get_anime_series_base(anime_id)
+    if not series:
+        await msg.answer(f"'{anime[3]}' uchun seriyalar topilmadi.", reply_markup=back_button_btn())
+        await state.finish()
+        return
+    
+    # Inline buttonlar bilan seriyalar ro‘yxatini yaratish
+    series_buttons = InlineKeyboardMarkup(row_width=3)
+    for serie in series:
+        serie_num = serie[2]  # serie_num
+        series_buttons.add(InlineKeyboardButton(text=f"{serie_num}-qism", callback_data=f"serie_{serie[1]}"))  # serie_id
+    series_buttons.add(InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_to_anime"))
+
+    await Posting.select_series.set()
+    await msg.answer(f"'{anime[3]}' animening qaysi qismini post qilamiz?", reply_markup=series_buttons)
+
+# Seriya tanlash
+@dp.callback_query_handler(state=Posting.select_series)
+async def select_series_for_post(call: types.CallbackQuery, state: FSMContext):
+    if call.data == "back_to_anime":
+        await Posting.select_anime.set()
+        await call.message.edit_text("Qaysi animeni qismini post qilamiz?", reply_markup=back_button_btn())
+        return
+    
+    serie_id = int(call.data.split("_")[1])
+    serie_num = get_id_to_num_serie_base(serie_id)
+    await state.update_data(serie_id=serie_id, serie_num=serie_num)
+    
+    # Kanallarni olish
+    channels = get_channels()
+    if not channels:
+        await call.message.edit_text("Hozirda hech qanday kanal qo‘shilmagan. Iltimos, avval kanal qo‘shing.", reply_markup=back_button_btn())
+        await state.finish()
+        return
+    
+    # Inline buttonlar bilan kanallar ro‘yxatini yaratish
+    channel_buttons = InlineKeyboardMarkup(row_width=2)
+    for channel in channels:
+        channel_name = channel[1]  # name
+        channel_buttons.add(InlineKeyboardButton(text=channel_name, callback_data=f"channel_{channel[0]}"))
+    channel_buttons.add(InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_to_series"))
+
+    await Posting.select_channel.set()
+    user_data = await state.get_data()
+    await call.message.edit_text(f"'{user_data['anime_name']}' animening {serie_num}-qismini qaysi kanalga post qilamiz?", reply_markup=channel_buttons)
+
+# Kanal tanlash
+@dp.callback_query_handler(state=Posting.select_channel)
+async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
+    if call.data == "back_to_series":
+        user_data = await state.get_data()
+        anime_id = user_data.get("anime_id")
+        anime_name = user_data.get("anime_name")
+        
+        # Seriyalarni qayta ko‘rsatish
+        series = get_anime_series_base(anime_id)
+        series_buttons = InlineKeyboardMarkup(row_width=3)
+        for serie in series:
+            serie_num = serie[2]  # serie_num
+            series_buttons.add(InlineKeyboardButton(text=f"{serie_num}-qism", callback_data=f"serie_{serie[1]}"))
+        series_buttons.add(InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_to_anime"))
+
+        await Posting.select_series.set()
+        await call.message.edit_text(f"'{anime_name}' animening qaysi qismini post qilamiz?", reply_markup=series_buttons)
+        return
+    
+    channel_id = int(call.data.split("_")[1])
+    channels = get_channels()
+    selected_channel = None
+    for channel in channels:
+        if channel[0] == channel_id:
+            selected_channel = channel
+            break
+    
+    if not selected_channel:
+        await call.message.edit_text("Kanal topilmadi. Iltimos, qaytadan urinib ko‘ring.", reply_markup=back_button_btn())
+        await state.finish()
+        return
+    
+    # Anime va seriya ma'lumotlarini olish
+    user_data = await state.get_data()
+    anime_name = user_data.get("anime_name")
+    serie_num = user_data.get("serie_num")
+    
+    # Postni tayyorlash
+    post_text = f"🎬 *{anime_name}* - {serie_num}-qism\n\n📺 Kanal: {selected_channel[1]}\n🔗 {selected_channel[2]}"
+    
+    # Postni kanalga yuborish
+    try:
+        await call.bot.send_message(chat_id=selected_channel[2], text=post_text, parse_mode="Markdown")
+        await call.message.edit_text(f"'{anime_name}' animening {serie_num}-qismi {selected_channel[1]} kanaliga post qilindi!", reply_markup=back_button_btn())
+    except Exception as e:
+        await call.message.edit_text(f"Xatolik yuz berdi: {str(e)}", reply_markup=back_button_btn())
+    
+    await state.finish()
+
+# Orqaga tugmasi uchun handler
+@dp.message_handler(lambda msg: msg.text == "⬅️ Orqaga", state="*")
+async def back_to_start(msg: types.Message, state: FSMContext):
+    await state.finish()
+    await msg.answer("Bosh menyuga qaytildi.", reply_markup=admin_button_btn())
+
+# # Handlerlarni ro‘yxatdan o‘tish
+# def register_handlers(dp: Dispatcher):
+#     # Bu funksiyani sizning boshqa handlerlaringiz bilan birlashtirishingiz mumkin
+#     pass
 class PostingSerie(StatesGroup):
     search = State()
     photo = State()
@@ -80,6 +218,8 @@ class PostingSerie(StatesGroup):
 class Add_sponser(StatesGroup):
     menu = State()
     adding = State()
+    add =   State()
+    remove = State()
 
 @dp.message_handler(commands="admin",state="*")
 async def start(msg:types.Message ,state : FSMContext):
@@ -123,6 +263,31 @@ async def start(msg:types.Message ,state : FSMContext):
         await state.finish()
         await PostingSerie.search.set()
         await msg.answer("<b>🔍Yangi qism qo'shilganligi haqida post qilinishi kerak bo'lgan animeni nomini kiriting</b>",reply_markup=back_button_btn())
+    elif text == "Kanal qo'shish":
+        await state.finish()
+        await Add_sponser.add.set()
+        await msg.answer("Qo'shmoqchi bo'lgan kanal linkini yuboring",reply_markup=back_button_btn())
+    elif text == "Kanal o'chirish":
+        await state.finish()
+        await Add_sponser.remove.set()
+        await msg.answer("O'chirmoqchi bo'lgan kanal linkini yuboring",reply_markup=back_button_btn())
+    elif text == "Kanallar":
+        await state.finish()  # Stateni tugatish
+        channels = get_channels()
+        if not channels:
+            await msg.answer("Hozircha hech qanday kanal qo'shilmagan.")
+            return
+        # Har bir kanalni chiroyli qilib formatlaymiz
+        text = "📢 *Kanallar ro'yxati:*\n\n"
+        for ch in channels:
+            text += f"🔹 *Nomi:* {ch[1]}\n🔗 *Havola:* {ch[2]}\n🕒 *Qo'shilgan sana:* {ch[4]}\n\n"
+
+        await msg.answer(text, parse_mode="Markdown")
+    
+    elif text == "Qismli post":
+        await state.finish()
+        await Posting.qismli_post.set()
+        await msg.answer("Qaysi animeni qismini post qilamiz",reply_markup=back_button_btn())
 
     elif text == "✏️Animeni tahrirlash":
         await state.finish()
@@ -156,7 +321,7 @@ async def start(msg:types.Message ,state : FSMContext):
             await state.finish()
             if not sponsor:
                 await Add_sponser.adding.set()
-                await msg.answer("🔒<b>Majburiy a'zo qo'shish</b> uchun majburiy a'zoga qo'shilishi kerak bo'lgan <b>kanaldan istalgan habarni botga ulashing</b>\n❗️Bo't siz <b>majbury a'zo qilmoqchi bo'lgan kanalda</b> admin etib tayinlangan bo'lishi zarur !",reply_markup=back_button_btn())
+                await msg.answer("🔒<b>Majburiy a'zo qo'shish</b> uchun majburiy a'zoga qo'shilishi kerak bo'lgan <b>kanaldan istalgan habarni botga ulashing</b>\n❗️Bot siz <b>majbury a'zo qilmoqchi bo'lgan kanalda</b> admin etib tayinlangan bo'lishi zarur !",reply_markup=back_button_btn())
             else:
                 await Add_sponser.menu.set()
                 a = await msg.answer("⏳",reply_markup=back_button_btn())
@@ -206,6 +371,70 @@ async def start(msg:types.Message ,state : FSMContext):
         a = await msg.answer("⌛️", reply_markup=back_button_btn())  # Yuklanayotgan xabar
         await a.delete()  # Yuklanayotgan xabarni o'chirish
         await msg.answer("/start ni bosing ✅")  # Asosiy menyuga qaytish
+
+
+@dp.message_handler(content_types=['text'], state=Add_sponser.add)
+async def qosh(msg: types.Message, state: FSMContext):
+    text = msg.text.strip()
+
+    if text == "🔙Ortga":
+        await state.finish()
+        await Admin.menu.set()
+        await msg.answer("👔<b>Admin panel</b>", reply_markup=admin_button_btn())
+        return
+
+    try:
+        if msg.forward_from_chat:
+            chat = msg.forward_from_chat
+        elif text.startswith("@"):
+            chat = await msg.bot.get_chat(text)
+        else:
+            await msg.answer("❗️Iltimos, kanal xabarini forward qiling yoki @username yuboring.")
+            return
+
+        # Bot kanalga adminmi?
+        await msg.bot.get_chat_administrators(chat.id)
+
+        name = chat.title
+        link = chat.invite_link or f"https://t.me/{chat.username}" if chat.username else "Havola mavjud emas"
+        added_by = msg.from_user.id
+        date_added = datetime.now().strftime("%Y-%m-%d")
+
+        add_channels_base(name, link, added_by, date_added)
+
+        await state.finish()
+        await Admin.menu.set()
+        await msg.answer(f"✅ <b>{name}</b> kanali muvaffaqiyatli qo‘shildi!", reply_markup=admin_button_btn())
+
+    except Exception as e:
+        print(f"[Kanal qo‘shish xatosi] {e}")
+        await msg.answer("❗️Kanalni qo‘shib bo‘lmadi. Bot kanalga admin ekanligini tekshiring.")
+@dp.message_handler(content_types=['text'], state=Add_sponser.remove)
+async def ochirish(msg: types.Message, state: FSMContext):
+    text = msg.text.strip()
+
+    if text == "🔙Ortga":
+        await state.finish()
+        await Admin.menu.set()
+        await msg.answer("👔<b>Admin panel</b>", reply_markup=admin_button_btn())
+        return
+
+    try:
+        username = text.lstrip("@")
+        success = remove_channel_base(username)
+
+        if success:
+            await msg.answer(f"❌ <b>@{username}</b> kanali bazadan o‘chirildi.")
+        else:
+            await msg.answer(f"❗️@{username} kanali topilmadi yoki allaqachon o‘chirilgan.")
+
+        await state.finish()
+        await Admin.menu.set()
+        await msg.answer("👔<b>Admin panel</b>", reply_markup=admin_button_btn())
+
+    except Exception as e:
+        print(f"[Kanal o‘chirish xatosi] {e}")
+        await msg.answer("❗️Kanalni o‘chirishda xatolik yuz berdi.")
 
 @dp.message_handler(content_types=["text"],state=Posting.search)
 async def start(msg:types.Message ,state : FSMContext):
@@ -539,6 +768,7 @@ async def start(msg:types.Message ,state : FSMContext):
 @dp.message_handler(content_types=["photo"],state=PostingSerie.photo)
 async def start(msg:types.Message ,state : FSMContext):
 
+
     data = await state.get_data()
     anime_id = int(data.get("anime_id"))
 
@@ -582,35 +812,50 @@ async def start(msg:types.Message ,state : FSMContext):
     await PostingSerie.action.set()
     photo = InputFile(path_output)
     await msg.answer_photo(photo=photo,caption=caption,reply_markup=serie_posting_action_clbtn())
+
+@dp.message_handler(content_types=["any"],state=Posting.video)
+async def start(msg:types.Message ,state : FSMContext):
     
+    text = msg.text
+    data = await state.get_data()
+    anime_id = int(data.get("anime_id"))
+    anime_list = data.get("anime_list")
 
+    if not anime_list:
+        anime_list = f"{anime_id}"
+        
+    else:
+        anime_list = f"{anime_list},{anime_id}"
 
-@dp.message_handler(state=Posting.chat_id)
-async def get_chat_id(msg: types.Message, state: FSMContext):
-    try:
-        chat_id = msg.text.strip()
-        data = await state.get_data()
-        anime_id = data.get("anime_id")
+    if text != "🔙Ortga":
 
-        caption = data.get("caption")
-        photo_path = data.get("photo_path")
-        a = data.get("loading_msg")
+        if msg.video.file_size < 30000000:
+            await msg.answer("🖼<b>Video serverga yuklanyapti kutib turing !</b>")
 
-        await dp.bot.send_photo(
-            chat_id=chat_id,
-            photo=InputFile(photo_path),
-            caption=caption,
-            reply_markup=serie_post_link_clbtn(anime_id)
-        )
+            try:
+                await msg.video.download(destination_file=f"post_{msg.from_user.id}/video.mp4")
+                await Posting.check.set()
+                a = await msg.reply(". . .",reply_markup=back_button_btn())
+                await a.delete()
 
-        os.remove(photo_path)
-        await dp.bot.delete_message(msg.chat.id, a)
+                async with state.proxy() as data:
+                    data["anime_list"] = anime_list
+
+                await msg.reply("📤<b>Post qilishni tasdiqlaysizmi ?</b>",reply_markup=admin_check_post_clbtn())
+            except:
+                shutil.rmtree(f"post_{msg.from_user.id}")
+                await msg.answer("🖼<b>Xatolik yuz berdi. Boshqa video yuborib ko'ring !</b>")        
+        else:
+            await msg.answer("🖼<b>Video hajmi 30mb dan kam bo'lishi kerak !</b>")
+            
+    else:
         await state.finish()
         await Admin.menu.set()
-        await msg.answer("<b>✅Po'st qilindi</b>", reply_markup=admin_button_btn())
+        await msg.answer("✅<b>Bekor qilindi</b>",reply_markup=admin_button_btn())
 
-    except Exception as e:
-        await msg.reply(f"❌ Xatolik: {e}")
+@dp.message_handler(content_types=["any"],state=Posting.check)
+async def start(msg:types.Message ,state : FSMContext):
+    await msg.delete()
 
 @dp.callback_query_handler(text_contains = "select",state=PostingSerie.action)
 async def qosh(call: types.CallbackQuery,state : FSMContext):
@@ -643,90 +888,23 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
 📑 <b>Janri :</b> {genre}
 🌐 <b>Tili :</b> {language}
 """
-        
-        photo_path = "handlers/post_media/output.jpg"
 
-        async with state.proxy() as data:
-            data["anime_id"] = anime_id
-            data["caption"] = caption
-            data["photo_path"] = photo_path
-            data["loading_msg"] = a.message_id
+        photo = InputFile("handlers/post_media/output.jpg")
+        a=-1002023259288
 
-        # photo = InputFile("handlers/post_media/output.jpg")
+        await dp.bot.send_photo(chat_id=a,photo=photo,caption=caption,reply_markup=serie_post_link_clbtn(anime_id))
+        os.remove("handlers/post_media/output.jpg")
 
-        # @dp.message_handler()
-        # async def get_chat_id(msg: types.Message):
-        #     try:
-        #         chat_id = msg.text.strip()
+        await a.delete()
+        await state.finish()
+        await Admin.menu.set()
+        await call.message.answer("<b>✅Post qilindi</b>",reply_markup=admin_button_btn())
 
-        #         await dp.bot.send_photo(
-        #             chat_id=chat_id,
-        #             photo=photo,
-        #             caption=caption,
-        #             reply_markup=serie_post_link_clbtn(anime_id)
-        #         )
-        #         os.remove("handlers/post_media/output.jpg")
 
-        #         await a.delete()
-        #         await state.finish()
-        #         await Admin.menu.set()
-        #         await call.message.answer("<b>✅Po'st qilindi</b>",reply_markup=admin_button_btn())
-
-        #     except:
-        #         await msg.reply("❌ Xatolik")
-
-        # chat_id=-1002023259288
-        # await dp.bot.send_photo(chat_id=chat_id,photo=photo,caption=caption,reply_markup=serie_post_link_clbtn(anime_id))
-        await call.message.reply("Kanal id yoki linkini kiriting (masalan: -1002023259288 yoki @kanal_nomi):")
-        await Posting.chat_id.set()
     else:
         await state.finish()
         await Admin.menu.set()
         await call.message.answer("<b>✅Bekor qilindi</b>",reply_markup=admin_button_btn())
-
-@dp.message_handler(content_types=["any"],state=Posting.video)
-async def start(msg:types.Message ,state : FSMContext):
-    
-    text = msg.text
-    data = await state.get_data()
-    anime_id = int(data.get("anime_id"))
-    anime_list = data.get("anime_list")
-
-    if not anime_list:
-        anime_list = f"{anime_id}"
-        
-    else:
-        anime_list = f"{anime_list},{anime_id}"
-
-    if text != "🔙Ortga":
-
-        if msg.video.file_size < 30000000:
-            await msg.answer("🖼<b>Video serverga yuklanyapti kutib turing !</b>")
-
-            try:
-                await msg.video.download(destination_file=f"post_{msg.from_user.id}/video.mp4")
-                await Posting.check.set()
-                a = await msg.reply(". . .",reply_markup=back_button_btn())
-                await a.delete()
-
-                async with state.proxy() as data:
-                    data["anime_list"] = anime_list
-
-                await msg.reply("📤<b>Post qilishni tasdiqlayszmi ?</b>",reply_markup=admin_check_post_clbtn())
-            except:
-                shutil.rmtree(f"post_{msg.from_user.id}")
-                await msg.answer("🖼<b>Xatolik yuz berdi. Boshqa video yuborib ko'ring !</b>")        
-        else:
-            await msg.answer("🖼<b>Video hajmi 30mb dan kam bo'lishi kerak !</b>")
-            
-    else:
-        await state.finish()
-        await Admin.menu.set()
-        await msg.answer("✅<b>Bekor qilindi</b>",reply_markup=admin_button_btn())
-
-@dp.message_handler(content_types=["any"],state=Posting.check)
-async def start(msg:types.Message ,state : FSMContext):
-    await msg.delete()
 
 @dp.callback_query_handler(text_contains = "select",state=Posting.check)
 async def qosh(call: types.CallbackQuery,state : FSMContext):
@@ -771,7 +949,8 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
 💬<b>Tili :</b> {lang}
 °•───────────────────
 📉<b>Status :</b> {anime_status}
-"""
+""" 
+        
 
         a = await dp.bot.send_video(chat_id=-1002023259288,video=open(f"post_{call.from_user.id}/video.mp4","rb"),caption=text,reply_markup=post_watching_clbtn(anime[0][0],anime_list))
         message_id = a.message_id

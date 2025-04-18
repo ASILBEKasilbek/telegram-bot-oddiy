@@ -71,17 +71,15 @@ def creating_table():
             updated_at TEXT
     )""")
     
-   
-    # cursor.execute("ALTER TABLE about_user ADD COLUMN is_blocked NUMERIC DEFAULT 0")
-    # cursor.execute("ALTER TABLE about_user ADD COLUMN anipass NUMERIC DEFAULT 0")
-    # cursor.execute("ALTER TABLE statistics_new ADD COLUMN date TEXT")
-    # cursor.execute("PRAGMA table_info(about_user)")
-    # columns = cursor.fetchall()
-    # print(columns)  # Jadvaldagi barcha ustunlarni ko‘rsatadi
+    conn.execute("""CREATE TABLE IF NOT EXISTS channels (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        link TEXT NOT NULL UNIQUE,
+        added_by INTEGER,
+        date_added TEXT
+    )
+    """)
 
-
-
-    # 'statistics_new' jadvalini yaratish
     conn.commit()
 def update_statistics():
     today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -160,18 +158,6 @@ def update_statistics():
     conn.commit()
     print("✅ Statistika yangilandi!")
 
-# def get_all_statistics():
-#     cursor.execute("""SELECT * FROM statistics_new WHERE name = 'AniDuble'""")
-#     data = cursor.fetchall()
-
-#     # Agar ma'lumotlar mavjud bo'lsa, qaytarish
-#     print(data)
-#     if data:
-#         print(f"Ma'lumotlar mavjud: {data[0]}")
-#         return data[0]  # Birinchi qatorni qaytaradi
-#     else:
-#         print("Ma'lumotlar mavjud emas.")
-#         return None
 def get_all_statistics():
     # Eng so'nggi statistik ma'lumotlarni olish
     cursor.execute("SELECT total_users, total_vip_users, total_free_users, total_anime, total_views, total_series, active_users, new_users_today, top_anime_id, updated_at FROM statistics_new2 ORDER BY id DESC LIMIT 1")
@@ -201,8 +187,6 @@ def get_random_anime():
     
     random_anime = random.choice(all_animes)
     return random_anime
-
-
 
 def update_statistics_user_base():
     cursor.execute(f"""UPDATE statistics_new SET bot_users = bot_users + 1 WHERE name = 'AniDuble' """)
@@ -396,6 +380,32 @@ def get_sponsor():
     data = cursor.fetchall()
     conn.commit()
     return data
+def add_channels_base(name , link,added_by,date_added):
+    cursor.execute('INSERT INTO channels (name, link, added_by, date_added) VALUES (?, ?, ?, ?);',(name, link, added_by, date_added))
+    conn.commit()
+def remove_channel_base(link_or_username):
+    # Tozalash
+    if link_or_username.startswith("https://t.me/"):
+        username = link_or_username.replace("https://t.me/", "")
+    elif link_or_username.startswith("@"):
+        username = link_or_username[1:]
+    else:
+        username = link_or_username
+
+    # Bazadagi linklar to‘liq bo‘lishi mumkin, shuning uchun LIKE bilan izlaymiz
+    cursor.execute("DELETE FROM channels WHERE link LIKE ?", (f"%{username}%",))
+    conn.commit()
+
+    return cursor.rowcount > 0
+
+def update_channels(chat_id,link):
+    cursor.execute(f"""UPDATE channels SET link = '{link}' WHERE channel_id = {chat_id} """)
+    conn.commit()
+    
+def get_channels():
+    cursor.execute("SELECT * FROM channels")
+    data = cursor.fetchall()
+    return data
 
 def delete_sponsor(id):
     cursor.execute(f"""DELETE FROM sponsor WHERE channel_id = {id} """)
@@ -566,32 +576,6 @@ def search_anime_base(prompt):
 
     return similar_anime
 
-
-# def search_anime_base(prompt):
-#     cursor.execute(f"""SELECT * FROM anime """)
-#     data = cursor.fetchall()
-#     conn.commit()
-    
-#     def similar(a, b):
-#         return SequenceMatcher(None, a, b).ratio()
-    
-#     similar_anime = []
-    
-#     for i in data:
-#         similarity = similar(prompt,i[3])
-
-#         if similarity < 0.7:
-#             tegs = str(i[6]).split(",")
-#             for a in tegs:
-#                 similarity = similar(prompt,a)
-            
-#                 if similarity > 0.7:
-#                     similar_anime.append(i)
-#                     break
-#         else:
-#             similar_anime.append(i)
-        
-#     return similar_anime
 
 def add_anime_base(lang,treller_id,name,about,genre,teg,dub,series = 0,films = 0,is_vip = 0,status = "loading",views = 0):
     cursor.execute('INSERT INTO anime (lang,treller_id,name,about,genre,teg,dub,series,films,is_vip,status,views) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);', (lang,treller_id,name,about,genre,teg,dub,series,films,is_vip,status,views))
