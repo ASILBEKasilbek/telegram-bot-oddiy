@@ -75,24 +75,38 @@ class Posting(StatesGroup):
     select_series = State()
     select_channel = State()
 
+class PostingSerie(StatesGroup):
+    search = State()
+    photo = State()
+    action = State()
+
+class Add_sponser(StatesGroup):
+    menu = State()
+    adding = State()
+    add =   State()
+    remove = State()
+
 # Qismli post boshlash
-@dp.message_handler(lambda msg: msg.text == "Qismli post", state="*")
-async def qismli_post_start(msg: types.Message, state: FSMContext):
-    await state.finish()
-    await Posting.select_anime.set()
-    await msg.answer("Qaysi animeni qismini post qilamiz?", reply_markup=back_button_btn())
+# @dp.message_handler(lambda msg: msg.text == "Qismli post", state="*")
+# async def qismli_post_start(msg: types.Message, state: FSMContext):
+#     await state.finish()
+#     await Posting.select_anime.set()
+#     await msg.answer("Qaysi animeni qismini post qilamiz?", reply_markup=back_button_btn())
 
 # Anime tanlash
 @dp.message_handler(content_types=["text"], state=Posting.select_anime)
 async def select_anime_for_post(msg: types.Message, state: FSMContext):
     anime_name = msg.text.strip()
-    if anime_name == "⬅️ Orqaga":
+    print(anime_name)
+    print(anime_name == "🔙Ortga")
+    if anime_name == "🔙Ortga":
         await state.finish()
         await msg.answer("Bosh menyuga qaytildi.", reply_markup=admin_button_btn())
         return
     
     # Animenni bazadan izlash
     anime_data = search_anime_base(anime_name)
+    print(anime_data)
     
     if not anime_data:
         await msg.answer("Bunday anime topilmadi. Iltimos, boshqa nom kiriting yoki tekshiring.", reply_markup=back_button_btn())
@@ -115,7 +129,7 @@ async def select_anime_for_post(msg: types.Message, state: FSMContext):
     for serie in series:
         serie_num = serie[2]  # serie_num
         series_buttons.add(InlineKeyboardButton(text=f"{serie_num}-qism", callback_data=f"serie_{serie[1]}"))  # serie_id
-    series_buttons.add(InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_to_anime"))
+    series_buttons.add(InlineKeyboardButton(text="🔙Ortga", callback_data="back_to_anime"))
 
     await Posting.select_series.set()
     await msg.answer(f"'{anime[3]}' animening qaysi qismini post qilamiz?", reply_markup=series_buttons)
@@ -164,7 +178,7 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
         for serie in series:
             serie_num = serie[2]  # serie_num
             series_buttons.add(InlineKeyboardButton(text=f"{serie_num}-qism", callback_data=f"serie_{serie[1]}"))
-        series_buttons.add(InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_to_anime"))
+        series_buttons.add(InlineKeyboardButton(text="🔙Ortga", callback_data="back_to_anime"))
 
         await Posting.select_series.set()
         await call.message.edit_text(f"'{anime_name}' animening qaysi qismini post qilamiz?", reply_markup=series_buttons)
@@ -201,25 +215,11 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
     await state.finish()
 
 # Orqaga tugmasi uchun handler
-@dp.message_handler(lambda msg: msg.text == "⬅️ Orqaga", state="*")
+@dp.message_handler(lambda msg: msg.text == "🔙Ortga", state="*")
 async def back_to_start(msg: types.Message, state: FSMContext):
     await state.finish()
     await msg.answer("Bosh menyuga qaytildi.", reply_markup=admin_button_btn())
 
-# # Handlerlarni ro‘yxatdan o‘tish
-# def register_handlers(dp: Dispatcher):
-#     # Bu funksiyani sizning boshqa handlerlaringiz bilan birlashtirishingiz mumkin
-#     pass
-class PostingSerie(StatesGroup):
-    search = State()
-    photo = State()
-    action = State()
-
-class Add_sponser(StatesGroup):
-    menu = State()
-    adding = State()
-    add =   State()
-    remove = State()
 
 @dp.message_handler(commands="admin",state="*")
 async def start(msg:types.Message ,state : FSMContext):
@@ -286,7 +286,7 @@ async def start(msg:types.Message ,state : FSMContext):
     
     elif text == "Qismli post":
         await state.finish()
-        await Posting.qismli_post.set()
+        await Posting.select_anime.set()
         await msg.answer("Qaysi animeni qismini post qilamiz",reply_markup=back_button_btn())
 
     elif text == "✏️Animeni tahrirlash":
