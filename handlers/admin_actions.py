@@ -159,40 +159,40 @@ async def select_series_for_post(call: types.CallbackQuery, state: FSMContext):
     user_data = await state.get_data()
     await call.message.edit_text(f"'{user_data['anime_name']}' animening {serie_num}-qismini qaysi kanalga post qilamiz?", reply_markup=channel_buttons)
 
-# Kanal tanlash
-def format_post_text(anime_id, serie_id, serie_num, selected_channel):
-    # Anime ma'lumotlarini olish
-    anime_data = get_anime_base(anime_id)
-    if not anime_data:
-        return None, "Anime ma'lumotlari topilmadi."
+# # Kanal tanlash
+# def format_post_text(anime_id, serie_id, serie_num, selected_channel):
+#     # Anime ma'lumotlarini olish
+#     anime_data = get_anime_base(anime_id)
+#     if not anime_data:
+#         return None, "Anime ma'lumotlari topilmadi."
     
-    anime = anime_data[0]
-    anime_name = anime[3]  # name
-    genre = anime[5]       # genre
-    about = anime[4]       # about (qisqartiriladi)
+#     anime = anime_data[0]
+#     anime_name = anime[3]  # name
+#     genre = anime[5]       # genre
+#     about = anime[4]       # about (qisqartiriladi)
     
-    # Seriya ma'lumotlarini olish
-    series = get_anime_series_base(anime_id)
-    quality = None
-    for serie in series:
-        if serie[1] == serie_id:  # serie_id
-            quality = serie[3]    # quality
-            break
+#     # Seriya ma'lumotlarini olish
+#     series = get_anime_series_base(anime_id)
+#     quality = None
+#     for serie in series:
+#         if serie[1] == serie_id:  # serie_id
+#             quality = serie[3]    # quality
+#             break
     
-    # About matnini qisqartirish (agar uzun bo‘lsa)
-    about = (about[:100] + "...") if len(about) > 100 else about
+#     # About matnini qisqartirish (agar uzun bo‘lsa)
+#     about = (about[:100] + "...") if len(about) > 100 else about
     
-    # Post matnini formatlash
-    post_text = f"""
-🎬 *{anime_name}* - {serie_num}-qism
-🌟 *Janr*: {genre}
-📜 *Tavsif*: {about}
-{'📽 *Sifat*: ' + quality if quality else ''}
+#     # Post matnini formatlash
+#     post_text = f"""
+# 🎬 *{anime_name}* - {serie_num}-qism
+# 🌟 *Janr*: {genre}
+# 📜 *Tavsif*: {about}
+# {'📽 *Sifat*: ' + quality if quality else ''}
 
-📺 *Kanal*: {selected_channel[1]}
-🔗 {selected_channel[2]}
-"""
-    return post_text, None
+# 📺 *Kanal*: {selected_channel[1]}
+# 🔗 {selected_channel[2]}
+# """
+#     return post_text, None
 
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -285,19 +285,7 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
     
     # Postni tayyorlash (kanal nomisiz va linksiz, chotki)
     post_text = f"""
-🎬 *{anime_name}* - {serie_num}-qism 🔥
--------------------
-🏷 *Nomi*: {anime_name}
-📑 *Janr*: {anime_genre}
-🎙 *Ovoz*: {anime_dub}
--------------------
-🎞 *Seriyalar*: {anime_serie}
-🎥 *Filmlar*: {anime_film}
--------------------
-💬 *Til*: {lang}
-#️⃣ *Teg*: {anime_teg}
-📉 *Status*: {status}
-👁‍🗨 *Ko‘rishlar*: {anime_views}
+📥  *{anime_name}* - {serie_num}-qism 🔥 @AniDuble
 """
     
     # Postni kanalga yuborish (inline knopka bilan)
