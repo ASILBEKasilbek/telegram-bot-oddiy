@@ -97,8 +97,6 @@ class Add_sponser(StatesGroup):
 @dp.message_handler(content_types=["text"], state=Posting.select_anime)
 async def select_anime_for_post(msg: types.Message, state: FSMContext):
     anime_name = msg.text.strip()
-    print(anime_name)
-    print(anime_name == "🔙Ortga")
     if anime_name == "🔙Ortga":
         await state.finish()
         await msg.answer("Bosh menyuga qaytildi.", reply_markup=admin_button_btn())
@@ -106,12 +104,9 @@ async def select_anime_for_post(msg: types.Message, state: FSMContext):
     
     # Animenni bazadan izlash
     anime_data = search_anime_base(anime_name)
-    print(anime_data)
-    
     if not anime_data:
         await msg.answer("Bunday anime topilmadi. Iltimos, boshqa nom kiriting yoki tekshiring.", reply_markup=back_button_btn())
         return
-    
     # Birinchi topilgan animeni olamiz
     anime = anime_data[0]
     anime_id = anime[0]  # anime_id
@@ -158,13 +153,47 @@ async def select_series_for_post(call: types.CallbackQuery, state: FSMContext):
     for channel in channels:
         channel_name = channel[1]  # name
         channel_buttons.add(InlineKeyboardButton(text=channel_name, callback_data=f"channel_{channel[0]}"))
-    channel_buttons.add(InlineKeyboardButton(text="⬅️ Orqaga", callback_data="back_to_series"))
+    channel_buttons.add(InlineKeyboardButton(text="🔙Ortga", callback_data="back_to_series"))
 
     await Posting.select_channel.set()
     user_data = await state.get_data()
     await call.message.edit_text(f"'{user_data['anime_name']}' animening {serie_num}-qismini qaysi kanalga post qilamiz?", reply_markup=channel_buttons)
 
 # Kanal tanlash
+def format_post_text(anime_id, serie_id, serie_num, selected_channel):
+    # Anime ma'lumotlarini olish
+    anime_data = get_anime_base(anime_id)
+    if not anime_data:
+        return None, "Anime ma'lumotlari topilmadi."
+    
+    anime = anime_data[0]
+    anime_name = anime[3]  # name
+    genre = anime[5]       # genre
+    about = anime[4]       # about (qisqartiriladi)
+    
+    # Seriya ma'lumotlarini olish
+    series = get_anime_series_base(anime_id)
+    quality = None
+    for serie in series:
+        if serie[1] == serie_id:  # serie_id
+            quality = serie[3]    # quality
+            break
+    
+    # About matnini qisqartirish (agar uzun bo‘lsa)
+    about = (about[:100] + "...") if len(about) > 100 else about
+    
+    # Post matnini formatlash
+    post_text = f"""
+🎬 *{anime_name}* - {serie_num}-qism
+🌟 *Janr*: {genre}
+📜 *Tavsif*: {about}
+{'📽 *Sifat*: ' + quality if quality else ''}
+
+📺 *Kanal*: {selected_channel[1]}
+🔗 {selected_channel[2]}
+"""
+    return post_text, None
+
 @dp.callback_query_handler(state=Posting.select_channel)
 async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
     if call.data == "back_to_series":
@@ -178,7 +207,7 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
         for serie in series:
             serie_num = serie[2]  # serie_num
             series_buttons.add(InlineKeyboardButton(text=f"{serie_num}-qism", callback_data=f"serie_{serie[1]}"))
-        series_buttons.add(InlineKeyboardButton(text="🔙Ortga", callback_data="back_to_anime"))
+        # series_buttons.add(InlineKeyboardButton(text="🔙Ortga", callback_data="back_to_anime"))
 
         await Posting.select_series.set()
         await call.message.edit_text(f"'{anime_name}' animening qaysi qismini post qilamiz?", reply_markup=series_buttons)
@@ -203,14 +232,21 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
     serie_num = user_data.get("serie_num")
     
     # Postni tayyorlash
-    post_text = f"🎬 *{anime_name}* - {serie_num}-qism\n\n📺 Kanal: {selected_channel[1]}\n🔗 {selected_channel[2]}"
-    
+    post_text = f"""
+    🎬 *{anime_name}* - {serie_num}-qism\n\n
+    📺 Kanal: {selected_channel[1]}\n
+    🔗 {selected_channel[2]}
+"""
+
+     
     # Postni kanalga yuborish
     try:
+        print(selected_channel[2])
         await call.bot.send_message(chat_id=selected_channel[2], text=post_text, parse_mode="Markdown")
-        await call.message.edit_text(f"'{anime_name}' animening {serie_num}-qismi {selected_channel[1]} kanaliga post qilindi!", reply_markup=back_button_btn())
+        print(12)
+        await call.message.edit_text(f"'{anime_name}' animening {serie_num}-qismi {selected_channel[1]} kanaliga post qilindi!")
     except Exception as e:
-        await call.message.edit_text(f"Xatolik yuz berdi: {str(e)}", reply_markup=back_button_btn())
+        await call.message.edit_text(f"Xatolik yuz berdi: {str(e)}")
     
     await state.finish()
 
@@ -329,7 +365,6 @@ async def start(msg:types.Message ,state : FSMContext):
                 await msg.answer("🔒<b>Sponsorlikdan chiqarilishi</b> kerak bo'lgan <b>Kanalni tanlang</b> yoki ➕ <b>orqali yana qo'shing</b> ",reply_markup=sponsor_list_clbtn(sponsor))
         else:
             await msg.answer("😕<b>Bu faqat Adminlar uchun</b>")
-    
     elif text == "👔Staff qo'shish":
         user = get_user_is_admin_base(msg.from_user.id)[0][0]
         if user == True: 
@@ -399,8 +434,8 @@ async def qosh(msg: types.Message, state: FSMContext):
         link = chat.invite_link or f"https://t.me/{chat.username}" if chat.username else "Havola mavjud emas"
         added_by = msg.from_user.id
         date_added = datetime.now().strftime("%Y-%m-%d")
-
-        add_channels_base(name, link, added_by, date_added)
+        asab="@"+chat.username
+        add_channels_base(name,asab, added_by, date_added)
 
         await state.finish()
         await Admin.menu.set()
