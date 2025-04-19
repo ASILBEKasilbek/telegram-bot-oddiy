@@ -172,7 +172,7 @@ Tilini tanlang :
                                    await a.delete()
 
                                    serie = get_series_base(serie_post_id)[-1]
-                                             
+                                   print(serie)
                                    serie_id = int(serie[1])
                                    serie_num = int(serie[2])
                                    serie_quality = serie[3]
@@ -220,19 +220,16 @@ Tilini tanlang :
                                    await a.delete()
 
                                    serie = get_series_base2(serie_post_id)
-                                             
-                                   serie_id = int(serie[1])
-                                   serie_num = int(serie[2])
-                                   serie_quality = serie[3]
-                                   which_anime = int(serie[0])
+                                   serie_id = int(serie[0][1])
+                                   serie_num = int(serie[0][2])
+                                   serie_quality = serie[0][3]
+                                   which_anime = int(serie[0][0])
                                    page = serie_num // 21
-
                                    next_states = True
 
                                    series = get_anime_series_base(which_anime)
 
-                                   is_vip_anime = anime[0][10]
-
+                                   is_vip_anime = "False"
                                    if is_vip_anime == "vip":
                                         if is_vip_user == "True":
                                              next_states = True
@@ -250,7 +247,7 @@ Tilini tanlang :
                                    if is_vip_anime == "True":
                                         protect = True
                                    else:
-                                        protect = False     
+                                        protect = False 
                                    
                                    if next_states == True:
                                         await User.watching.set()
