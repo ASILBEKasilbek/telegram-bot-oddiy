@@ -94,6 +94,9 @@ class Add_sponser(StatesGroup):
 #     await msg.answer("Qaysi animeni qismini post qilamiz?", reply_markup=back_button_btn())
 
 # Anime tanlash
+from aiogram import types
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
 @dp.message_handler(content_types=["text"], state=Posting.select_anime)
 async def select_anime_for_post(msg: types.Message, state: FSMContext):
     anime_name = msg.text.strip()
@@ -107,15 +110,68 @@ async def select_anime_for_post(msg: types.Message, state: FSMContext):
     if not anime_data:
         await msg.answer("Bunday anime topilmadi. Iltimos, boshqa nom kiriting yoki tekshiring.", reply_markup=back_button_btn())
         return
-    # Birinchi topilgan animeni olamiz
+    
+    # Agar faqat bitta anime topilsa, avtomatik davom etamiz
+    if len(anime_data) == 1:
+        anime = anime_data[0]
+        anime_id = anime[0]  # anime_id
+        anime_name = anime[3]  # anime nomi
+        await state.update_data(anime_id=anime_id, anime_name=anime_name)
+        
+        # Animenning seriyalarini olish
+        series = get_anime_series_base(anime_id)
+        if not series:
+            await msg.answer(f"'{anime_name}' uchun seriyalar topilmadi.", reply_markup=back_button_btn())
+            await state.finish()
+            return
+        
+        # Inline buttonlar bilan seriyalar ro‘yxatini yaratish
+        series_buttons = InlineKeyboardMarkup(row_width=3)
+        for serie in series:
+            serie_num = serie[2]  # serie_num
+            series_buttons.add(InlineKeyboardButton(text=f"{serie_num}-qism", callback_data=f"serie_{serie[1]}"))  # serie_id
+        series_buttons.add(InlineKeyboardButton(text="🔙Ortga", callback_data="back_to_anime"))
+
+        await Posting.select_series.set()
+        await msg.answer(f"'{anime_name}' animening qaysi qismini post qilamiz?", reply_markup=series_buttons)
+        return
+    
+    # Agar bir nechta anime topilsa, foydalanuvchiga tanlash imkonini beramiz
+    anime_buttons = InlineKeyboardMarkup(row_width=1)
+    for anime in anime_data:
+        anime_id = anime[0]  # anime_id
+        anime_name = anime[3]  # anime nomi
+        anime_buttons.add(InlineKeyboardButton(text=anime_name, callback_data=f"anime_{anime_id}"))
+    anime_buttons.add(InlineKeyboardButton(text="🔙Ortga", callback_data="back_to_search"))
+
+    await Posting.select_anime.set()
+    await msg.answer("Bir nechta anime topildi. Iltimos, kerakli animeni tanlang:", reply_markup=anime_buttons)
+
+# Anime tanlash uchun callback handler
+@dp.callback_query_handler(state=Posting.select_anime, regexp="anime_|back_to_search")
+async def process_anime_selection(call: types.CallbackQuery, state: FSMContext):
+    if call.data == "back_to_search":
+        await call.message.edit_text("Anime nomini kiriting:", reply_markup=back_button_btn())
+        return
+    
+    # Tanlangan anime_id ni olish
+    anime_id = int(call.data.split("_")[1])
+    
+    # Animenni bazadan qayta olish
+    anime_data = get_anime_base(anime_id)
+    if not anime_data:
+        await call.message.edit_text("Anime ma'lumotlari topilmadi! 😕", reply_markup=back_button_btn())
+        await state.finish()
+        return
+    
     anime = anime_data[0]
-    anime_id = anime[0]  # anime_id
-    await state.update_data(anime_id=anime_id, anime_name=anime[3])  # anime nomini saqlaymiz
+    anime_name = anime[3]  # anime nomi
+    await state.update_data(anime_id=anime_id, anime_name=anime_name)
     
     # Animenning seriyalarini olish
     series = get_anime_series_base(anime_id)
     if not series:
-        await msg.answer(f"'{anime[3]}' uchun seriyalar topilmadi.", reply_markup=back_button_btn())
+        await call.message.edit_text(f"'{anime_name}' uchun seriyalar topilmadi.")
         await state.finish()
         return
     
@@ -127,8 +183,7 @@ async def select_anime_for_post(msg: types.Message, state: FSMContext):
     series_buttons.add(InlineKeyboardButton(text="🔙Ortga", callback_data="back_to_anime"))
 
     await Posting.select_series.set()
-    await msg.answer(f"'{anime[3]}' animening qaysi qismini post qilamiz?", reply_markup=series_buttons)
-
+    await call.message.edit_text(f"'{anime_name}' animening qaysi qismini post qilamiz?", reply_markup=series_buttons)
 # Seriya tanlash
 @dp.callback_query_handler(state=Posting.select_series)
 async def select_series_for_post(call: types.CallbackQuery, state: FSMContext):
@@ -249,7 +304,6 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
     serie_num = user_data.get("serie_num")
     anime_data = get_anime_base(anime_id)
     anime_id=get_seria_id(anime_id,serie_num)
-    print(anime_id)
     
     # Anime ma'lumotlarini bazadan olish
     
