@@ -329,10 +329,10 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
         )
     
     await state.finish()
-@dp.message_handler(lambda msg: msg.text == "🔙Ortga", state="*")
-async def back_to_start(msg: types.Message, state: FSMContext):
-    await state.finish()
-    await msg.answer("Bosh menyuga qaytildi.", reply_markup=admin_button_btn())
+# @dp.message_handler(lambda msg: msg.text == "🔙Ortga", state="*")
+# async def back_to_start(msg: types.Message, state: FSMContext):
+#     await state.finish()
+#     await msg.answer("Bosh menyuga qaytildi.", reply_markup=admin_button_btn())
 
 
 @dp.message_handler(commands="admin",state="*")
