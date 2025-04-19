@@ -194,25 +194,40 @@ def format_post_text(anime_id, serie_id, serie_num, selected_channel):
 """
     return post_text, None
 
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+from aiogram import types
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+def back_button_inline():
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton(text="🔙 Ortga", callback_data="back_to_menu"))
+    return markup
+
+
+
 @dp.callback_query_handler(state=Posting.select_channel)
 async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
+    # Orqaga qaytish (seriyalarni qayta ko‘rsatish)
     if call.data == "back_to_series":
         user_data = await state.get_data()
         anime_id = user_data.get("anime_id")
         anime_name = user_data.get("anime_name")
         
-        # Seriyalarni qayta ko‘rsatish
         series = get_anime_series_base(anime_id)
         series_buttons = InlineKeyboardMarkup(row_width=3)
         for serie in series:
             serie_num = serie[2]  # serie_num
             series_buttons.add(InlineKeyboardButton(text=f"{serie_num}-qism", callback_data=f"serie_{serie[1]}"))
-        # series_buttons.add(InlineKeyboardButton(text="🔙Ortga", callback_data="back_to_anime"))
+        series_buttons.add(InlineKeyboardButton(text="🔙 Ortga", callback_data="back_to_anime"))
 
         await Posting.select_series.set()
         await call.message.edit_text(f"'{anime_name}' animening qaysi qismini post qilamiz?", reply_markup=series_buttons)
         return
     
+    # Kanal ID sini olish
     channel_id = int(call.data.split("_")[1])
     channels = get_channels()
     selected_channel = None
@@ -222,35 +237,98 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
             break
     
     if not selected_channel:
-        await call.message.edit_text("Kanal topilmadi. Iltimos, qaytadan urinib ko‘ring.", reply_markup=back_button_btn())
+        await call.message.edit_text("Kanal topilmadi, qayta urinib ko‘r! 😕", reply_markup=back_button_inline())
         await state.finish()
         return
     
     # Anime va seriya ma'lumotlarini olish
     user_data = await state.get_data()
+    anime_id = user_data.get("anime_id")
     anime_name = user_data.get("anime_name")
     serie_num = user_data.get("serie_num")
     
-    # Postni tayyorlash
+    # Anime ma'lumotlarini bazadan olish
+    anime_data = get_anime_base(anime_id)
+    if not anime_data:
+        await call.message.edit_text("Anime ma'lumotlari topilmadi! 😕", reply_markup=back_button_inline())
+        await state.finish()
+        return
+    
+    anime = anime_data[0]
+    anime_lang = anime[1]  # lang
+    anime_genre = anime[5]  # genre
+    anime_teg = anime[6]  # teg
+    anime_dub = anime[7]  # dub
+    anime_serie = anime[8]  # series
+    anime_film = anime[9]  # films
+    anime_status = anime[11]  # status
+    anime_views = anime[12]  # views
+    
+    # Status va tilni formatlash
+    if anime_status == "loading":
+        status = "OnGoing"
+    elif anime_status == "finished":
+        status = "Tugallangan"
+    else:
+        status = anime_status
+    
+    if anime_lang == "uz":
+        lang = "O‘zbekcha"
+    elif anime_lang == "ru":
+        lang = "Ruscha"
+    elif anime_lang == "jp":
+        lang = "Yaponcha"
+    elif anime_lang == "en":
+        lang = "Inglizcha"
+    else:
+        lang = anime_lang
+    
+    # Postni tayyorlash (kanal nomisiz va linksiz, chotki)
     post_text = f"""
-    🎬 *{anime_name}* - {serie_num}-qism\n\n
-    📺 Kanal: {selected_channel[1]}\n
-    🔗 {selected_channel[2]}
+🎬 *{anime_name}* - {serie_num}-qism 🔥
+-------------------
+🏷 *Nomi*: {anime_name}
+📑 *Janr*: {anime_genre}
+🎙 *Ovoz*: {anime_dub}
+-------------------
+🎞 *Seriyalar*: {anime_serie}
+🎥 *Filmlar*: {anime_film}
+-------------------
+💬 *Til*: {lang}
+#️⃣ *Teg*: {anime_teg}
+📉 *Status*: {status}
+👁‍🗨 *Ko‘rishlar*: {anime_views}
 """
-
-     
-    # Postni kanalga yuborish
+    
+    # Postni kanalga yuborish (inline knopka bilan)
     try:
-        print(selected_channel[2])
-        await call.bot.send_message(chat_id=selected_channel[2], text=post_text, parse_mode="Markdown")
-        print(12)
-        await call.message.edit_text(f"'{anime_name}' animening {serie_num}-qismi {selected_channel[1]} kanaliga post qilindi!")
+        await call.bot.send_message(
+            chat_id=selected_channel[2],
+            text=post_text,
+            parse_mode="Markdown",
+            reply_markup=serie_post_link_clbtn(anime_id)
+        )
+        await call.message.edit_text(
+            f"✅ '{anime_name}' {serie_num}-qismi zo‘r yuborildi! 🚀",
+            reply_markup=back_button_inline()
+        )
+    except types.exceptions.ChatNotFound:
+        await call.message.edit_text(
+            "Kanal topilmadi yoki bot yozolmaydi! 😕",
+            reply_markup=back_button_inline()
+        )
+    except types.exceptions.BotKicked:
+        await call.message.edit_text(
+            f"Bot {selected_channel[1]} dan bloklangan! 😡",
+            reply_markup=back_button_inline()
+        )
     except Exception as e:
-        await call.message.edit_text(f"Xatolik yuz berdi: {str(e)}")
+        await call.message.edit_text(
+            f"Xato: {str(e)} 😞",
+            reply_markup=back_button_inline()
+        )
     
     await state.finish()
-
-# Orqaga tugmasi uchun handler
 @dp.message_handler(lambda msg: msg.text == "🔙Ortga", state="*")
 async def back_to_start(msg: types.Message, state: FSMContext):
     await state.finish()
