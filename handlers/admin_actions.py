@@ -219,7 +219,7 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
         series = get_anime_series_base(anime_id)
         series_buttons = InlineKeyboardMarkup(row_width=3)
         for serie in series:
-            serie_num = serie[2]  # serie_num
+            serie_num = serie[2]
             series_buttons.add(InlineKeyboardButton(text=f"{serie_num}-qism", callback_data=f"serie_{serie[1]}"))
         series_buttons.add(InlineKeyboardButton(text="🔙 Ortga", callback_data="back_to_anime"))
 
@@ -244,11 +244,16 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
     # Anime va seriya ma'lumotlarini olish
     user_data = await state.get_data()
     anime_id = user_data.get("anime_id")
+    # print(anime_id)
     anime_name = user_data.get("anime_name")
     serie_num = user_data.get("serie_num")
+    anime_data = get_anime_base(anime_id)
+    anime_id=get_seria_id(anime_id,serie_num)
+    print(anime_id)
     
     # Anime ma'lumotlarini bazadan olish
-    anime_data = get_anime_base(anime_id)
+    
+    # print(anime_data)
     if not anime_data:
         await call.message.edit_text("Anime ma'lumotlari topilmadi! 😕", reply_markup=back_button_inline())
         await state.finish()
@@ -297,7 +302,7 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
             reply_markup=serie_post_link_clbtn(anime_id)
         )
         await call.message.edit_text(
-            f"✅ '{anime_name}' {serie_num}-qismi zo‘r yuborildi! 🚀",
+            f"✅ '{anime_name}' {serie_num}-qismi zo'r yuborildi! 🚀",
             reply_markup=back_button_inline()
         )
     except types.exceptions.ChatNotFound:
@@ -317,6 +322,7 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
         )
     
     await state.finish()
+
 # @dp.message_handler(lambda msg: msg.text == "🔙Ortga", state="*")
 # async def back_to_start(msg: types.Message, state: FSMContext):
 #     await state.finish()

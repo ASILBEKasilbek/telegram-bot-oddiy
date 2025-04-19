@@ -324,7 +324,8 @@ def serie_posting_action_clbtn():
 
 def serie_post_link_clbtn(anime_id):
     cheker = InlineKeyboardMarkup()
-    cheker.add(InlineKeyboardButton("✨Tomosha qilish✨",url=f"https://t.me/ANIDUBLE_RASMIY_BOT?start={anime_id}serie"))
+    a='demo23454_bot';a1='ANIDUBLE_RASMIY_BOT'
+    cheker.add(InlineKeyboardButton("✨Tomosha qilish✨",url=f"https://t.me/{a1}?start={anime_id}serie"))
         
     return cheker
 

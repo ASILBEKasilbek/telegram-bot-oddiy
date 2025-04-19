@@ -515,6 +515,15 @@ def get_series_base(anime_id):
     except:
         data = []
     return data
+
+def get_series_base2(anime_id):
+    try:
+        cursor.execute(f"""SELECT * FROM series WHERE serie_id = {anime_id}""")
+        data = cursor.fetchall()
+        conn.commit()
+    except:
+        data = []
+    return data
     
 def get_random_anime_sql():
     cursor.execute("SELECT * FROM anime ORDER BY RANDOM() LIMIT 1")
@@ -553,7 +562,6 @@ def search_anime_base(prompt):
     try:
         cursor.execute(query, parameters)
         results = cursor.fetchall()
-        print(f"📥 SQL natija soni: {len(results)}")
     except Exception as e:
         return []
     # 🛠️ is_int va boshqalar bo‘lsa similarity kerak emas
@@ -647,6 +655,25 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
     if column_name not in columns:
         conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
         conn.commit()
+
+# which_anime_value = 71  # misol uchun
+# serie_num_value = 10    # misol uchun
+def get_seria_id(which_anime_value,serie_num_value):
+    cursor = conn.execute("""
+        SELECT serie_id 
+        FROM series 
+        WHERE which_anime = ? AND serie_num = ?
+    """, (which_anime_value, serie_num_value))
+
+    result = cursor.fetchone()
+    if result:
+        serie_id = result[0]
+        # print("Serie ID:", serie_id)
+        return serie_id
+    else:
+        # print("Bunday malumot topilmadi.")
+        return "Bunday malumot topilmadi"
+    
 
 add_column_if_not_exists(conn, 'about_user', 'free', 'INTEGER DEFAULT 0')
 add_column_if_not_exists(conn, 'about_user', 'is_blocked', 'INTEGER DEFAULT 0')

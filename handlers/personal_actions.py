@@ -214,6 +214,55 @@ Tilini tanlang :
                                              data["serie"] = a.message_id
 
                                         await msg.answer(anime_serie_message(lang,serie_num,serie_quality),reply_markup=anime_series_clbtn(serie_num,series,page))
+                              
+                              elif serie_post_id:
+                                   a = await msg.answer(anime_found_message(lang),reply_markup=back_button_btn())
+                                   await a.delete()
+
+                                   serie = get_series_base2(serie_post_id)
+                                             
+                                   serie_id = int(serie[1])
+                                   serie_num = int(serie[2])
+                                   serie_quality = serie[3]
+                                   which_anime = int(serie[0])
+                                   page = serie_num // 21
+
+                                   next_states = True
+
+                                   series = get_anime_series_base(which_anime)
+
+                                   is_vip_anime = anime[0][10]
+
+                                   if is_vip_anime == "vip":
+                                        if is_vip_user == "True":
+                                             next_states = True
+                                        else:
+                                             await state.finish()
+                                             await User.menu.set()
+
+                                             async with state.proxy() as data:
+                                                  data["lang"] = lang
+                                                  data["vip"] = is_vip
+
+                                             await msg.answer("‼️Ushbu animeni tomosha qilish uchun ⚡️AniPass sotib olishingiz kerak !",reply_markup=user_button_btn(lang))
+                                             next_states = False
+
+                                   if is_vip_anime == "True":
+                                        protect = True
+                                   else:
+                                        protect = False     
+                                   
+                                   if next_states == True:
+                                        await User.watching.set()
+                                        
+                                        a = await dp.bot.forward_message(chat_id=user_id,message_id=serie_id,from_chat_id=anime_series_chat,protect_content=protect)
+
+                                        async with state.proxy() as data:
+                                             data["lang"] = lang
+                                             data["serie"] = a.message_id
+
+                                        await msg.answer(anime_serie_message(lang,serie_num,serie_quality),reply_markup=anime_series_clbtn(serie_num,series,page))
+
                               else:
                                    username = msg.from_user.username
                
@@ -509,7 +558,7 @@ Lux kanalga Echchi va hentai animelar o'zbek tilida joylab boriladi 💎
                # await msg.answer("Qaytish uchun /start ni bosing")
 
           elif text == "Tasodifiy anime":
-               await msg.answer("<b>Tasodifiy anime tugmasini bosing<b>",parse_mode="HTML")
+               await msg.answer("<b>Tasodifiy anime tugmasini bosing<b>",)
                await User.tasodifiy.set()
                
           elif text == "Animelar ro'yhati 📓" or text == "Animelar ro'yhati 📓":
