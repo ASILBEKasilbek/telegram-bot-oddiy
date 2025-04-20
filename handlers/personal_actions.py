@@ -670,6 +670,7 @@ async def handle_search_tag(call: types.CallbackQuery, state: FSMContext):
      #      protect_content=protect
      # ) 
      trailer_id = result[0][2]
+     print("idf",trailer_id)
      anime_id = result[0][0]
      is_vip = result[0][10]
 
@@ -687,7 +688,7 @@ async def handle_search_tag(call: types.CallbackQuery, state: FSMContext):
      await User.anime_menu.set()
      await call.message.answer(anime_menu_message(lang,result),reply_markup=anime_menu_clbtn(lang,anime_id,False,have_serie,is_vip))
 
-     await User.menu.set()
+     # await User.menu.set()
 
      await call.answer()  
 
@@ -1188,7 +1189,6 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
                data["have_serie"] = have_serie
                data["lang"] = lang
                data["vip"] = is_vip_user
-          # print(anime)
 
           await User.anime_menu.set()
           await call.message.answer(anime_menu_message(lang,anime),reply_markup=anime_menu_clbtn(lang,anime_id,False,have_serie,is_vip))
@@ -1244,8 +1244,11 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
                          next_states = False
 
                if next_states == True:
-               
-                    trailer = int(data.get("trailer"))
+                    trailer = data.get("trailer")
+                    if trailer is not None:
+                         trailer = int(trailer)
+                    else:
+                         trailer = 0
                     try:
                          await dp.bot.delete_message(chat_id=user_id,message_id=trailer)
                     except:
