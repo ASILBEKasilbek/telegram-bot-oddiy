@@ -577,17 +577,20 @@ def search_anime_base(prompt):
         name_words = row["name"].lower().split()
         genre_tags = str(row["genre"]).lower().split(",")
         tegs = str(row[6]).split(",")
+        k=0
         for a in tegs:
             similarity = similar(prompt,a)
         
-            if similarity > 0.7:
+            if similarity >= 0.6:
                 similar_results.append(row)
+                k=1
                 break
-        for word in name_words + genre_tags:
-            word = word.strip()
-            if similar(prompt, word) >= 0.6:
-                similar_results.append(row)
-                break
+        if k==0:
+            for word in name_words + genre_tags:
+                word = word.strip()
+                if similar(prompt, word) >= 0.6:
+                    similar_results.append(row)
+                    break
 
     return similar_results
 
