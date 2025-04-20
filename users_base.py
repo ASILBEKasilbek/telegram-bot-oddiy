@@ -79,6 +79,20 @@ def creating_table():
         date_added TEXT
     )
     """)
+    
+    conn.execute("""
+CREATE VIRTUAL TABLE IF NOT EXISTS anime_fts USING fts5(
+    name, 
+    genre, 
+    content='anime', 
+    content_rowid='anime_id'
+);
+""")
+
+    conn.execute("""
+INSERT INTO anime_fts(rowid, name, genre)
+SELECT anime_id, name, genre FROM anime;
+""")
 
     conn.commit()
 def update_statistics():
@@ -531,59 +545,50 @@ def get_random_anime_sql():
     if result:
         return result
     else:
-        return "Hech qanday anime topilmadi."
-    
+        return None
+
+from difflib import SequenceMatcher
+
+def similar(a, b):
+    return SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
 def search_anime_base(prompt):
-    query = "SELECT * FROM anime WHERE 1=1"
-    parameters = []
-    prompt = prompt.strip()
-    is_int = prompt.isdigit()
-    is_bool = prompt.lower() in ["true", "false"]
-    is_lang = prompt.lower() in ["uz", "ru", "jp", "en"]
-    is_status = prompt.lower() in ["ongoing", "completed", "paused"]
-    if is_int:
-        query += " AND anime_id = ?"
-        parameters.append(int(prompt))
-    elif is_bool:
-        query += " AND is_vip = ?"
-        parameters.append(prompt.lower() == "true")
-    elif is_lang:
-        query += " AND lang = ?"
-        parameters.append(prompt.lower())
-    elif is_status:
-        query += " AND status = ?"
-        parameters.append(prompt.lower())
-    else:
-        query += " AND (name LIKE ? OR genre LIKE ?)"
-        parameters.append(f"%{prompt}%")
-        parameters.append(f"%{prompt}%")
-    # SQL so‘rovni bajarish
-    try:
-        cursor.execute(query, parameters)
-        results = cursor.fetchall()
-    except Exception as e:
-        return []
-    # 🛠️ is_int va boshqalar bo‘lsa similarity kerak emas
-    if is_int or is_bool or is_lang or is_status:
-        return results
+    prompt = prompt.strip().lower()
+    cursor.row_factory = sqlite3.Row
 
-    # 🔍 Similarity funksiyasi (faqat name/genre uchun)
-    def similar(a, b):
-        return SequenceMatcher(None, a.lower(), b.lower()).ratio()
-    similar_anime = []
-    for row in results:
-        name_similarity = similar(prompt, row[3])  # row[3] = name
-        if name_similarity >= 0.7:
-            similar_anime.append(row)
-            continue
-        for tag in str(row[6]).split(","):  # row[6] = genre
-            if similar(prompt, tag.strip()) >= 0.7:
-                similar_anime.append(row)
+    # 1. FTS5 orqali qidirish
+    fts_query = """
+        SELECT anime.* FROM anime
+        JOIN anime_fts ON anime.anime_id = anime_fts.rowid
+        WHERE anime_fts MATCH ?
+    """
+    try:
+        results = cursor.execute(fts_query, [prompt]).fetchall()
+        if results:
+            return results
+    except Exception as e:
+        print("FTS5 xato:", e)
+
+    # 2. LIKE orqali kengroq natijalar olish (shunchaki ko‘proq imkoniyat uchun)
+    like_query = """
+        SELECT * FROM anime
+        WHERE LOWER(name) LIKE ? OR LOWER(genre) LIKE ?
+    """
+    like_results = cursor.execute(like_query, [f"%{prompt}%", f"%{prompt}%"]).fetchall()
+
+    # 3. Har bir natijani tekshiramiz — hatto bitta harf xatolik bo‘lsa ham
+    similar_results = []
+    for row in like_results:
+        name_words = row["name"].lower().split()
+        genre_tags = str(row["genre"]).lower().split(",")
+
+        for word in name_words + genre_tags:
+            word = word.strip()
+            if similar(prompt, word) >= 0.6:
+                similar_results.append(row)
                 break
 
-    return similar_anime
-
+    return similar_results
 
 def add_anime_base(lang,treller_id,name,about,genre,teg,dub,series = 0,films = 0,is_vip = 0,status = "loading",views = 0):
     cursor.execute('INSERT INTO anime (lang,treller_id,name,about,genre,teg,dub,series,films,is_vip,status,views) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);', (lang,treller_id,name,about,genre,teg,dub,series,films,is_vip,status,views))

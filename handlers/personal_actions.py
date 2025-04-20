@@ -431,14 +431,6 @@ async def start(msg:types.Message ,state : FSMContext):
                data["lang"] = lang
      
      text = msg.text
-     # if send_expiration_message(user_id) == True:
-     #      is_vip = "True"
-     # else:
-     #      is_vip = "False"
-     # if is_vip == "True":
-     #      is_sub = True
-     # else:
-     #      is_sub = await sponsor_cheking_func(msg,lang)
 
      if text == "📚Qo'llanma" or text == "📚Qo'llanma":
           await msg.answer(about_bot_message(lang,msg.from_user.id))
@@ -544,19 +536,10 @@ Lux kanalga Echchi va hentai animelar o'zbek tilida joylab boriladi 💎
     
      elif is_vip =="True":
 
-          # if text == "🏙Rasm orqali qidiruv" or text == "🏙Rasm orqali qidiruv":
-          #      await User.search_by_photo.set()
-          #      text = "<b>🔍Nomini topa olmayotgan animeingizni Rasmini yuboring</b>"
-          #      await msg.answer(text,reply_markup=back_user_button_btn(lang))
-          
+
           if text == "🔍Anime Qidirish" or text == "🔍Запросить аниме":
                await msg.answer("<b>Qidiruv turini tanlang!</b>",reply_markup=search_clbtn(),parse_mode="HTML")
                await User.searching.set()
-               # await msg.answer("Qaytish uchun /start ni bosing")
-
-          elif text == "Tasodifiy anime":
-               await msg.answer("<b>Tasodifiy anime tugmasini bosing<b>",)
-               await User.tasodifiy.set()
                
           elif text == "Animelar ro'yhati 📓" or text == "Animelar ro'yhati 📓":
                animes = get_animes_base()
@@ -590,12 +573,9 @@ Lux kanalga Echchi va hentai animelar o'zbek tilida joylab boriladi 💎
                if is_vip and is_vip[0][0]:
                     expiry_date_str = is_vip[0][0]
 
-                    # Formatni avtomatik aniqlash
                     try:
-                         # Avval to‘liq datetime format bo‘lishi mumkinligini tekshir
                          expiry_date = datetime.strptime(expiry_date_str, "%Y-%m-%d %H:%M:%S")
                     except ValueError:
-                         # Faqat sana bo‘lsa, vaqtni 00:00:00 deb qo‘sh
                          expiry_date = datetime.strptime(expiry_date_str, "%Y-%m-%d")
 
                     current_time = datetime.now()
@@ -619,63 +599,6 @@ Lux kanalga Echchi va hentai animelar o'zbek tilida joylab boriladi 💎
                     message = "<b>Sizda ⚡️AniPass mavjud emas yoki muddati aniqlanmadi.</b>"
 
                await msg.answer(message, reply_markup=user_button_btn(lang, is_vip))
-
-#                if is_vip[0][0] != "0" and is_lux[0][0] != "0":
-
-#                     text = f"""
-# <b>Sizdagi ⚡️AniPass obunani tugash vaqti :</b> {is_vip[0][0]}
-# """
-                    
-# # <b>Sizdagi 💎Lux kanaldagi obunangizni tugash vaqti :</b> {is_lux[0][0]}
-#                     await msg.answer(text,reply_markup=user_button_btn(lang))
-
-#                elif is_vip[0][0] != "0" and is_lux[0][0] == "0":
-
-#                     text = f"""
-# <b>Sizdagi ⚡️AniPass tugash vaqti :</b> {is_vip[0][0]}
-# -
-# 🔥 <b>AniDuble botidan 💎 Lux Kanalga ulanish uchun ma'lumotlar :<i>
-# °•───────────────────
-# Endilikda Echchi va Hentai animelarni o'zbek tilida Lux Kanalimizda ko'rishingiz mumkun 
-# °•───────────────────
-# Lux kanalga Echchi va hentai animelar o'zbek tilida joylab boriladi 💎
-# °•───────────────────
-# 💎Lux Kanal uchun  obuna sotib olish narxlarni menu dan tanlashingiz mumkin</i></b>
-# """                 
-#                     await msg.answer_animation(animation=open("media/vip_channel.mp4","rb"),caption=text,reply_markup=vip_channel_clbtn())
-                    
-#                elif is_vip[0][0] == "0" and is_lux[0][0] != "0":
-
-#                     text = f"""
-# <b>Sizdagi 💎Lux kanaldagi obunangizni tugash vaqti :</b> {is_lux[0][0]}
-# -
-# 🔥<b>💫 Aniduble botidan ⚡️ AniPass sotib olganingizdan keyingi qulayliklar
-# °•───────────────────
-# 🎉Qulayliklar 
-# ⚡️ Botni 2x tezlikda ishlatish 
-# 💣 Botdan mukkammal va erkin foydalana olish 
-# 📺 Eski seriyalar o'chmaydi 
-# 📡 Homiy kanallarga a'zo bo'lish shart 
-# emas .
-# 🧨 Botdan sizga qoshimcha reklamalar kelmaydi va bezovta qilmaydi .
-# °•───────────────────
-# 🎟 Qoshiladigan tugmalar 
-# 🖼 Rasm orqali qidiruv
-# 🔃 Tasodifiy anime 
-# 🔸️ Eng ko'p ko'rilgan animelar 
-# 🏮 Janr orqali qidiruv 
-# ⚠️ Eslatma : ⚡️AniPass  faqat bot uchun amal qiladi 
-# ⚡️ AniPass narxi atiga : 5.000 so'm 💵</b>
-# """                     
-#                     print(text)
-#                     await msg.answer_animation(animation=open("media/vip.mp4","rb"),caption=text,reply_markup=vip_buying_clbtn())
-
-               # else:
-
-#                     text = f"""
-# <b>🔥Qaysi turdagi obunani sotib olishni istaysiz ?</b>
-# """
-#                     await msg.answer(text,reply_markup=which_vip_clbtn())
 
           elif len(text) > 5:
                anime = search_anime_base(text)
@@ -709,22 +632,54 @@ Lux kanalga Echchi va hentai animelar o'zbek tilida joylab boriladi 💎
 @dp.callback_query_handler(text_contains = "search_rasm",state=User.searching)
 async def start(call: types.CallbackQuery,state : FSMContext):
      lang = (await state.get_data()).get("lang")
-     # is_vip_user = (await state.get_data()).get("vip")
      
      await call.message.delete()
      await call.message.answer("🔍Nomini topa olmayotgan animeingizni Rasmini yuboring",reply_markup=back_user_button_btn(lang))
      await User.search_by_photo.set()
-     await call.answer("Qaytish uchun /start ni bosing")
 
 @dp.callback_query_handler(text_contains = "search_id_name",state=User.searching)
 async def start(call: types.CallbackQuery,state : FSMContext):
      lang = (await state.get_data()).get("lang")
-     # is_vip_user = (await state.get_data()).get("vip")
-
      await call.message.delete()
      await call.message.answer("🔍Qidirish uchun anime nomi yoki ID sini yuboring !",reply_markup=back_user_button_btn(lang))
      await User.searching.set()
-     await call.answer("Qaytish uchun /start ni bosing")
+@dp.callback_query_handler(text_contains="search_teg", state=User.searching)
+async def handle_search_tag(call: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    lang = data.get("lang")
+    user_id = call.from_user.id 
+    protect = True  
+
+    await call.message.delete()
+
+    # Tasodifiy anime olish
+    result = get_random_anime_sql()  # get_random_anime_sql funksiyasi qaytargan natija
+
+    # Anime ma'lumotlarini ko'rsatish
+#     if result:
+#         # Agar natija bo'lsa, anime haqida xabarni yuborish
+#         await call.message.answer(
+#             anime_menu_message(lang, result),  # anime_menu_message funksiyasi ishlatiladi
+#             reply_markup=anime_menu_clbtn(lang, result[0], False, result[9] > 0, data.get("vip"))
+#         )
+#     else:
+#         # Agar natija topilmasa, foydalanuvchiga xabar yuborish
+#         await call.message.answer("Hech qanday anime topilmadi.")
+
+    serie_id = result[2] 
+    anime_series_chat = "anime_series_chat_id" 
+
+    a = await dp.bot.forward_message(
+        chat_id=user_id,
+        message_id=serie_id,
+        from_chat_id=anime_series_chat,
+        protect_content=protect
+    )
+
+    await User.searching.set()
+
+    await call.answer()  
+
 
 @dp.message_handler(state=[User.tasodifiy, User.anime_menu, User.watching])
 async def start(call: types.Message, state: FSMContext):
@@ -959,7 +914,6 @@ async def qosh(call: types.CallbackQuery, state: FSMContext):
           )
 
 
-
 @dp.callback_query_handler(text_contains="HA", state=User.buying_vip)
 async def qosh(call: types.CallbackQuery, state: FSMContext):
      data = await state.get_data()
@@ -1133,7 +1087,6 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
      is_vip_user= data.get("vip")
 
      user_id = call.from_user.id
-
      if anime_id != "back":
           anime_id = int(anime_id)
           anime = get_anime_base(anime_id)

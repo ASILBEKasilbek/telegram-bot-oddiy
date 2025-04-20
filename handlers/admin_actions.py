@@ -344,7 +344,7 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
         lang = anime_lang
     
     # Postni tayyorlash (kanal nomisiz va linksiz, chotki)
-    post_text = f"📥  <b>{anime_name}</b> - {serie_num}-qism 🔥 @AniDuble"
+    post_text = f"📥  <i>{anime_name}</i> - {serie_num}-qism 🔥 @AniDuble"
     # Postni kanalga yuborish (inline knopka bilan)
     try:
         await call.bot.send_message(
@@ -447,6 +447,7 @@ async def start(msg:types.Message ,state : FSMContext):
             )
 
         await msg.answer(text, parse_mode="HTML")
+        await Admin.menu.set()
 
     elif text == "Qismli post":
         await state.finish()
