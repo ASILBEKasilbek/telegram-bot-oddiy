@@ -661,7 +661,7 @@ async def handle_search_tag(call: types.CallbackQuery, state: FSMContext):
         from_chat_id=anime_series_chat,
         protect_content=protect
     )
-    await User.anime_menu.set()
+    await User.menu.set()
 
     await call.answer()  
 
