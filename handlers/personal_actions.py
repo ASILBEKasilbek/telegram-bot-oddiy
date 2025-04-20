@@ -652,22 +652,8 @@ async def handle_search_tag(call: types.CallbackQuery, state: FSMContext):
 
     await call.message.delete()
 
-    # Tasodifiy anime olish
-    result = get_random_anime_sql()  # get_random_anime_sql funksiyasi qaytargan natija
-
-#     # Anime ma'lumotlarini ko'rsatish
-#     if result:
-#         # Agar natija bo'lsa, anime haqida xabarni yuborish
-#         await call.message.answer(
-#             anime_menu_message(lang, result),  # anime_menu_message funksiyasi ishlatiladi
-#             reply_markup=anime_menu_clbtn(lang, result[0], False, result[9] > 0, data.get("vip"))
-#         )
-#     else:
-#         await call.message.answer("Hech qanday anime topilmadi.")
-
-    serie_id = result[2] 
-    print(serie_id)
-    anime_series_chat = "anime_series_chat_id" 
+    result = get_random_anime_sql()  
+    serie_id = result[2]
 
     a = await dp.bot.forward_message(
         chat_id=user_id,
@@ -679,7 +665,6 @@ async def handle_search_tag(call: types.CallbackQuery, state: FSMContext):
     await User.searching.set()
 
     await call.answer()  
-
 
 @dp.message_handler(state=[User.tasodifiy, User.anime_menu, User.watching])
 async def start(call: types.Message, state: FSMContext):
