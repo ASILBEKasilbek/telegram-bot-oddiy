@@ -655,17 +655,18 @@ async def handle_search_tag(call: types.CallbackQuery, state: FSMContext):
     # Tasodifiy anime olish
     result = get_random_anime_sql()  # get_random_anime_sql funksiyasi qaytargan natija
 
-    # Anime ma'lumotlarini ko'rsatish
-    if result:
-        # Agar natija bo'lsa, anime haqida xabarni yuborish
-        await call.message.answer(
-            anime_menu_message(lang, result),  # anime_menu_message funksiyasi ishlatiladi
-            reply_markup=anime_menu_clbtn(lang, result[0], False, result[9] > 0, data.get("vip"))
-        )
-    else:
-        await call.message.answer("Hech qanday anime topilmadi.")
+#     # Anime ma'lumotlarini ko'rsatish
+#     if result:
+#         # Agar natija bo'lsa, anime haqida xabarni yuborish
+#         await call.message.answer(
+#             anime_menu_message(lang, result),  # anime_menu_message funksiyasi ishlatiladi
+#             reply_markup=anime_menu_clbtn(lang, result[0], False, result[9] > 0, data.get("vip"))
+#         )
+#     else:
+#         await call.message.answer("Hech qanday anime topilmadi.")
 
     serie_id = result[2] 
+    print(serie_id)
     anime_series_chat = "anime_series_chat_id" 
 
     a = await dp.bot.forward_message(
