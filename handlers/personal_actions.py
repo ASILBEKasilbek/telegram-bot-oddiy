@@ -653,12 +653,13 @@ async def handle_search_tag(call: types.CallbackQuery, state: FSMContext):
      await call.message.delete()
 
      result = get_random_anime_sql()  
-     serie_id = result[2]
+     # print(result)
+     serie_id = result[0][2]
      # print(result)
      is_vip_user = data.get("vip")
               
      have_serie = False
-     if result[8] > 0:
+     if result[0][8] > 0:
           have_serie = True
 
 
@@ -668,20 +669,20 @@ async def handle_search_tag(call: types.CallbackQuery, state: FSMContext):
      #      from_chat_id=anime_series_chat,
      #      protect_content=protect
      # ) 
-     trailer_id = result[2]
-     anime_id = result[0]
-     is_vip = result[10]
+     trailer_id = result[0][2]
+     anime_id = result[0][0]
+     is_vip = result[0][10]
 
      trailer = await dp.bot.forward_message(message_id=trailer_id,chat_id=user_id,from_chat_id=anime_treller_chat)
 
-     # await state.finish()
+     await state.finish()
      # print(result)
 
-     # async with state.proxy() as data:
-     #      data["trailer"] = trailer.message_id
-     #      data["have_serie"] = have_serie
-     #      data["lang"] = lang
-          # data["vip"] = is_vip_user
+     async with state.proxy() as data:
+          data["trailer"] = trailer.message_id
+          data["have_serie"] = have_serie
+          data["lang"] = lang
+          data["vip"] = is_vip_user
 
      await User.anime_menu.set()
      await call.message.answer(anime_menu_message(lang,result),reply_markup=anime_menu_clbtn(lang,anime_id,False,have_serie,is_vip))
