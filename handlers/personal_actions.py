@@ -654,7 +654,7 @@ async def handle_search_tag(call: types.CallbackQuery, state: FSMContext):
 
      result = get_random_anime_sql()  
      serie_id = result[2]
-     print(result)
+     # print(result)
      is_vip_user = data.get("vip")
               
      have_serie = False
@@ -674,13 +674,14 @@ async def handle_search_tag(call: types.CallbackQuery, state: FSMContext):
 
      trailer = await dp.bot.forward_message(message_id=trailer_id,chat_id=user_id,from_chat_id=anime_treller_chat)
 
-     await state.finish()
+     # await state.finish()
+     # print(result)
 
-     async with state.proxy() as data:
-          data["trailer"] = trailer.message_id
-          data["have_serie"] = have_serie
-          data["lang"] = lang
-          data["vip"] = is_vip_user
+     # async with state.proxy() as data:
+     #      data["trailer"] = trailer.message_id
+     #      data["have_serie"] = have_serie
+     #      data["lang"] = lang
+          # data["vip"] = is_vip_user
 
      await User.anime_menu.set()
      await call.message.answer(anime_menu_message(lang,result),reply_markup=anime_menu_clbtn(lang,anime_id,False,have_serie,is_vip))
@@ -873,6 +874,7 @@ async def start(msg:types.Message ,state : FSMContext):
 
                          trailer_id = anime[0][2]
                          anime_id = anime[0][0]
+                         print(1234)
                          trailer = await dp.bot.forward_message(message_id=trailer_id,chat_id=user_id,from_chat_id=anime_treller_chat)
                          await state.finish()
 
@@ -1175,16 +1177,17 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
           trailer_id = anime[0][2]
           anime_id = anime[0][0]
           is_vip = anime[0][10]
-
-          trailer = await dp.bot.forward_message(message_id=trailer_id,chat_id=user_id,from_chat_id=anime_treller_chat)
+          
+          # trailer = await dp.bot.forward_message(message_id=trailer_id,chat_id=user_id,from_chat_id=anime_treller_chat)
           
           await state.finish()
 
-          async with state.proxy() as data:
-               data["trailer"] = trailer.message_id
-               data["have_serie"] = have_serie
-               data["lang"] = lang
-               data["vip"] = is_vip_user
+          # async with state.proxy() as data:
+          #      data["trailer"] = trailer.message_id
+          #      data["have_serie"] = have_serie
+          #      data["lang"] = lang
+          #      data["vip"] = is_vip_user
+          print(anime)
 
           await User.anime_menu.set()
           await call.message.answer(anime_menu_message(lang,anime),reply_markup=anime_menu_clbtn(lang,anime_id,False,have_serie,is_vip))

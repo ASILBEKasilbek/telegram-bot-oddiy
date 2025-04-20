@@ -541,9 +541,10 @@ def get_random_anime_sql():
     cursor.execute("SELECT * FROM anime ORDER BY RANDOM() LIMIT 1")
     result = cursor.fetchone()
     if result:
-        return result
+        return [result]  # Ro‘yxat shaklida qaytarilyapti
     else:
-        return None
+        return []
+
 
 from difflib import SequenceMatcher
 
@@ -554,7 +555,6 @@ def search_anime_base(prompt):
     prompt = prompt.strip().lower()
     cursor.row_factory = sqlite3.Row
 
-    # 1. FTS5 orqali qidirish
     fts_query = """
         SELECT anime.* FROM anime
         JOIN anime_fts ON anime.anime_id = anime_fts.rowid
@@ -567,19 +567,22 @@ def search_anime_base(prompt):
     except Exception as e:
         print("FTS5 xato:", e)
 
-    # 2. LIKE orqali kengroq natijalar olish (shunchaki ko‘proq imkoniyat uchun)
     like_query = """
         SELECT * FROM anime
         WHERE LOWER(name) LIKE ? OR LOWER(genre) LIKE ?
     """
     like_results = cursor.execute(like_query, [f"%{prompt}%", f"%{prompt}%"]).fetchall()
-
-    # 3. Har bir natijani tekshiramiz — hatto bitta harf xatolik bo‘lsa ham
     similar_results = []
     for row in like_results:
         name_words = row["name"].lower().split()
         genre_tags = str(row["genre"]).lower().split(",")
-
+        tegs = str(row[6]).split(",")
+        for a in tegs:
+            similarity = similar(prompt,a)
+        
+            if similarity > 0.7:
+                similar_results.append(row)
+                break
         for word in name_words + genre_tags:
             word = word.strip()
             if similar(prompt, word) >= 0.6:
@@ -622,7 +625,6 @@ def update_anime_views_base(anime_id):
     cursor.execute(f"""UPDATE anime SET views = views + 1 WHERE anime_id = {anime_id} """)
     conn.commit()
 
-creating_table()
 # add_statistics_base()
 
 def update_free_status(user_id, free_value):
