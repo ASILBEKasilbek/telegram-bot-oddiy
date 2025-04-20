@@ -653,9 +653,7 @@ async def handle_search_tag(call: types.CallbackQuery, state: FSMContext):
      await call.message.delete()
 
      result = get_random_anime_sql()  
-     # print(result)
      serie_id = result[0][2]
-     # print(result)
      is_vip_user = data.get("vip")
               
      have_serie = False
@@ -663,21 +661,13 @@ async def handle_search_tag(call: types.CallbackQuery, state: FSMContext):
           have_serie = True
 
 
-     # a = await dp.bot.forward_message(
-     #      chat_id=user_id,
-     #      message_id=serie_id,
-     #      from_chat_id=anime_series_chat,
-     #      protect_content=protect
-     # ) 
      trailer_id = result[0][2]
-     print("idf",trailer_id)
      anime_id = result[0][0]
      is_vip = result[0][10]
 
      trailer = await dp.bot.forward_message(message_id=trailer_id,chat_id=user_id,from_chat_id=anime_treller_chat)
 
      await state.finish()
-     # print(result)
 
      async with state.proxy() as data:
           data["trailer"] = trailer.message_id
@@ -687,9 +677,6 @@ async def handle_search_tag(call: types.CallbackQuery, state: FSMContext):
 
      await User.anime_menu.set()
      await call.message.answer(anime_menu_message(lang,result),reply_markup=anime_menu_clbtn(lang,anime_id,False,have_serie,is_vip))
-
-     # await User.menu.set()
-
      await call.answer()  
 
 
@@ -704,7 +691,7 @@ async def handle_search_top_10(call: types.CallbackQuery, state: FSMContext):
 
     # Query the database to get the top 10 most viewed anime
     cursor.execute("""
-        SELECT anime_id, name, views 
+        SELECT anime_id, name, treller_id, views, series, is_vip 
         FROM anime 
         ORDER BY views DESC 
         LIMIT 10
@@ -712,30 +699,34 @@ async def handle_search_top_10(call: types.CallbackQuery, state: FSMContext):
     top_anime = cursor.fetchall()  # Get the top 10 anime as a list of tuples
     
     if top_anime:
-        # Create inline keyboard for the top 10 anime
-        inline_buttons = []
         for anime in top_anime:
-            anime_id, anime_name, views = anime
-            
-            # Create an inline button for each anime
-            button = InlineKeyboardButton(text=f"{anime_name} - {views} ko'rish", callback_data=f"top_anime_{anime_id}")
-            inline_buttons.append(button)
-        
-        # Create an inline keyboard markup
-        inline_keyboard = InlineKeyboardMarkup(row_width=1).add(*inline_buttons)
-        
-        # Send a message with the inline keyboard
-        await dp.bot.send_message(
-            chat_id=user_id,
-            text="Top 10 eng ko'p ko'rilgan anime ro'yxati:",
-            reply_markup=inline_keyboard
-        )
-        
-        # Set the state to menu after finishing
-        await User.menu.set()
+            anime_id, anime_name, trailer_id, views, have_serie_count, is_vip = anime
+            have_serie = have_serie_count > 0
+            is_vip_user = data.get("vip")
 
+            # Forward the trailer to the user
+            trailer = await dp.bot.forward_message(
+                message_id=trailer_id,
+                chat_id=user_id,
+                from_chat_id=anime_treller_chat
+            )
+
+            # Update state data
+            async with state.proxy() as state_data:
+                state_data["trailer"] = trailer.message_id
+                state_data["have_serie"] = have_serie
+                state_data["lang"] = lang
+                state_data["vip"] = is_vip_user
+
+            # Send anime menu message with inline keyboard
+            await call.message.answer(
+                anime_menu_message(lang, [(anime_id, anime_name, trailer_id, views, have_serie_count, is_vip)]),
+                reply_markup=anime_menu_clbtn(lang, anime_id, False, have_serie, is_vip)
+            )
+
+    # Set the state to anime_menu
+    await User.anime_menu.set()
     await call.answer()
-
 
 # Callback for when an inline button is pressed
 @dp.callback_query_handler(lambda c: c.data.startswith("top_anime_"))
