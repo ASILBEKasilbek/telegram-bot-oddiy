@@ -344,16 +344,13 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
         lang = anime_lang
     
     # Postni tayyorlash (kanal nomisiz va linksiz, chotki)
-    post_text = f"""
-📥  *{anime_name}* - {serie_num}-qism 🔥 @AniDuble
-"""
-    
+    post_text = f"📥  <b>{anime_name}</b> - {serie_num}-qism 🔥 @AniDuble"
     # Postni kanalga yuborish (inline knopka bilan)
     try:
         await call.bot.send_message(
             chat_id=selected_channel[2],
             text=post_text,
-            parse_mode="Markdown",
+            parse_mode="HTML",
             reply_markup=serie_post_link_clbtn(anime_id)
         )
         await call.message.edit_text(
@@ -441,12 +438,16 @@ async def start(msg:types.Message ,state : FSMContext):
             await msg.answer("Hozircha hech qanday kanal qo'shilmagan.")
             return
         # Har bir kanalni chiroyli qilib formatlaymiz
-        text = "📢 *Kanallar ro'yxati:*\n\n"
+        text = "📢 <b>Kanallar ro'yxati:</b>\n\n"
         for ch in channels:
-            text += f"🔹 *Nomi:* {ch[1]}\n🔗 *Havola:* {ch[2]}\n🕒 *Qo'shilgan sana:* {ch[4]}\n\n"
+            text += (
+                f"🔹 <b>Nomi:</b> {ch[1]}\n"
+                f"🔗 <b>Havola:</b> {ch[2]}\n"
+                f"🕒 <b>Qo'shilgan sana:</b> {ch[4]}\n\n"
+            )
 
-        await msg.answer(text, parse_mode="Markdown")
-    
+        await msg.answer(text, parse_mode="HTML")
+
     elif text == "Qismli post":
         await state.finish()
         await Posting.select_anime.set()
