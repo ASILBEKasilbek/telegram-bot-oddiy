@@ -645,45 +645,32 @@ async def start(call: types.CallbackQuery,state : FSMContext):
      await User.searching.set()
 @dp.callback_query_handler(text_contains="search_teg", state=User.searching)
 async def handle_search_tag(call: types.CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    lang = data.get("lang")
-    user_id = call.from_user.id 
-    protect = True  
-
-    await call.message.delete()
-
-    result = get_random_anime_sql()  
-    serie_id = result[2]
-
-    a = await dp.bot.forward_message(
-        chat_id=user_id,
-        message_id=serie_id,
-        from_chat_id=anime_series_chat,
-        protect_content=protect
-    )
-    await User.menu.set()
-
-    await call.answer()  
-
-@dp.message_handler(state=[User.tasodifiy, User.anime_menu, User.watching])
-async def start(call: types.Message, state: FSMContext):
-    # FSMContext yordamida holat ma'lumotlarini olish
      data = await state.get_data()
      lang = data.get("lang")
-     is_vip_user = data.get("vip")
-     anime=[]
+     user_id = call.from_user.id 
+     protect = True  
 
-     user_id = call.from_user.id
-     anime.append(get_random_anime())
-     await call.delete()
-               
+     await call.message.delete()
+
+     result = get_random_anime_sql()  
+     serie_id = result[2]
+     print(result)
+     is_vip_user = data.get("vip")
+              
      have_serie = False
-     if anime[0][9] > 0:
+     if result[8] > 0:
           have_serie = True
 
-     trailer_id = anime[0][2]
-     anime_id = anime[0][0]
-     is_vip = anime[0][10]
+
+     # a = await dp.bot.forward_message(
+     #      chat_id=user_id,
+     #      message_id=serie_id,
+     #      from_chat_id=anime_series_chat,
+     #      protect_content=protect
+     # ) 
+     trailer_id = result[2]
+     anime_id = result[0]
+     is_vip = result[10]
 
      trailer = await dp.bot.forward_message(message_id=trailer_id,chat_id=user_id,from_chat_id=anime_treller_chat)
 
@@ -694,11 +681,115 @@ async def start(call: types.Message, state: FSMContext):
           data["have_serie"] = have_serie
           data["lang"] = lang
           data["vip"] = is_vip_user
-     
 
      await User.anime_menu.set()
-     await call.answer(anime_menu_message(lang,anime),reply_markup=anime_menu_clbtn(lang,anime_id,False,have_serie,is_vip_user))
-     await call.answer("Qaytish uchun /start ni bosing")
+     await call.message.answer(anime_menu_message(lang,result),reply_markup=anime_menu_clbtn(lang,anime_id,False,have_serie,is_vip))
+
+     await User.menu.set()
+
+     await call.answer()  
+
+
+@dp.callback_query_handler(text_contains="search_top_10", state=User.searching)
+async def handle_search_top_10(call: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    lang = data.get("lang")
+    user_id = call.from_user.id
+    protect = True  
+
+    await call.message.delete()
+
+    # Query the database to get the top 10 most viewed anime
+    cursor.execute("""
+        SELECT anime_id, name, views 
+        FROM anime 
+        ORDER BY views DESC 
+        LIMIT 10
+    """)
+    top_anime = cursor.fetchall()  # Get the top 10 anime as a list of tuples
+    
+    if top_anime:
+        # Create inline keyboard for the top 10 anime
+        inline_buttons = []
+        for anime in top_anime:
+            anime_id, anime_name, views = anime
+            
+            # Create an inline button for each anime
+            button = InlineKeyboardButton(text=f"{anime_name} - {views} ko'rish", callback_data=f"top_anime_{anime_id}")
+            inline_buttons.append(button)
+        
+        # Create an inline keyboard markup
+        inline_keyboard = InlineKeyboardMarkup(row_width=1).add(*inline_buttons)
+        
+        # Send a message with the inline keyboard
+        await dp.bot.send_message(
+            chat_id=user_id,
+            text="Top 10 eng ko'p ko'rilgan anime ro'yxati:",
+            reply_markup=inline_keyboard
+        )
+        
+        # Set the state to menu after finishing
+        await User.menu.set()
+
+    await call.answer()
+
+
+# Callback for when an inline button is pressed
+@dp.callback_query_handler(lambda c: c.data.startswith("top_anime_"))
+async def handle_anime_selection(call: types.CallbackQuery):
+    anime_id = int(call.data.split("_")[1])
+    
+    # Query to get the anime details
+    cursor.execute("""
+        SELECT anime_id, name, about, genre 
+        FROM anime 
+        WHERE anime_id = ?
+    """, (anime_id,))
+    anime_details = cursor.fetchone()
+    
+    if anime_details:
+        anime_id, name, about, genre = anime_details
+        response_text = f"**{name}**\n\n{about}\n\nGenre: {genre}"
+        
+        # Send the anime details to the user
+        await call.message.answer(response_text)
+
+    await call.answer()
+
+# @dp.message_handler(state=[User.tasodifiy, User.anime_menu, User.watching])
+# async def start(call: types.Message, state: FSMContext):
+#     # FSMContext yordamida holat ma'lumotlarini olish
+#      data = await state.get_data()
+#      lang = data.get("lang")
+#      is_vip_user = data.get("vip")
+#      anime=[]
+
+#      user_id = call.from_user.id
+#      anime.append(get_random_anime())
+#      await call.delete()
+               
+#      have_serie = False
+#      if anime[0][9] > 0:
+#           have_serie = True
+
+#      trailer_id = anime[0][2]
+#      anime_id = anime[0][0]
+#      is_vip = anime[0][10]
+
+#      trailer = await dp.bot.forward_message(message_id=trailer_id,chat_id=user_id,from_chat_id=anime_treller_chat)
+
+#      await state.finish()
+
+#      async with state.proxy() as data:
+#           data["trailer"] = trailer.message_id
+#           data["have_serie"] = have_serie
+#           data["lang"] = lang
+#           data["vip"] = is_vip_user
+     
+
+#      await User.anime_menu.set()
+#      await call.answer(anime_menu_message(lang,anime),reply_markup=anime_menu_clbtn(lang,anime_id,False,have_serie,is_vip_user))
+#      await call.answer("Qaytish uchun /start ni bosing")
 
 @dp.message_handler(content_types=["photo"], state=User.search_by_photo)
 async def start(msg: types.Message, state: FSMContext):

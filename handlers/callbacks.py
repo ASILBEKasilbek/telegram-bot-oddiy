@@ -10,7 +10,7 @@ def search_clbtn():
     cheker = InlineKeyboardMarkup()
     cheker.add(InlineKeyboardButton("🔍Nom va ID orqali qidirish",callback_data=f'search_id_name'),InlineKeyboardButton("🖼 Rasm orqali qidiruv",callback_data=f'search_rasm'))
     cheker.add(InlineKeyboardButton("🔄 Anime tavsiya",callback_data=f'search_teg'),InlineKeyboardButton("🎭 Janr orqali qidiruv",callback_data=f'search_anime_id'))
-    cheker.add(InlineKeyboardButton("🌏 Eng ko'p ko'rilgan animelar",callback_data=f'search_serie')) 
+    cheker.add(InlineKeyboardButton("🌏 Eng ko'p ko'rilgan animelar",callback_data=f'search_top_10')) 
     return cheker
 
 def vip_buying_clbtn():

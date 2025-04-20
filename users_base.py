@@ -80,8 +80,7 @@ def creating_table():
     )
     """)
     
-    conn.execute("""
-CREATE VIRTUAL TABLE IF NOT EXISTS anime_fts USING fts5(
+    conn.execute("""CREATE VIRTUAL TABLE IF NOT EXISTS anime_fts USING fts5(
     name, 
     genre, 
     content='anime', 
@@ -89,8 +88,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS anime_fts USING fts5(
 );
 """)
 
-    conn.execute("""
-INSERT INTO anime_fts(rowid, name, genre)
+    conn.execute("""INSERT INTO anime_fts(rowid, name, genre)
 SELECT anime_id, name, genre FROM anime;
 """)
 
