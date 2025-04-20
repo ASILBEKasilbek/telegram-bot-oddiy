@@ -102,6 +102,7 @@ async def select_anime_for_post(msg: types.Message, state: FSMContext):
     anime_name = msg.text.strip()
     if anime_name == "🔙Ortga":
         await state.finish()
+        await Admin.menu.set()
         await msg.answer("Bosh menyuga qaytildi.", reply_markup=admin_button_btn())
         return
     
