@@ -150,7 +150,6 @@ def anime_serie_message(lang,serie_num,quality):
     return text
 
 def anime_menu_message(lang,anime_data):
-    print(anime_data)
 
     anime_lang = anime_data[0][1]
     anime_name = anime_data[0][3]
