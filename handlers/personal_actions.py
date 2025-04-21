@@ -20,7 +20,12 @@ from dotenv import load_dotenv
 import os
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-
+import logging
+try:
+    from fuzzywuzzy import process, fuzz
+except ImportError:
+    process = None
+    fuzz = None
 
 load_dotenv()
 
@@ -595,6 +600,12 @@ async def handle_search_tag(call: types.CallbackQuery, state: FSMContext):
      await call.answer()  
 
 
+
+
+# Logging sozlamalari
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 @dp.callback_query_handler(text_contains='search_anime_id', state=User.searching)
 async def prompt_genre_input(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
@@ -610,37 +621,80 @@ async def prompt_genre_input(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
 
 @dp.message_handler(state=User.genre_input)
-async def handle_genre_search(message: types.Message, state: FSMContext):
-    genre = message.text.strip()
+async def handle_genre_search(message: types.Message, state: FSMContext, page=1):
+    user_genre = message.text.strip().lower()
     data = await state.get_data()
     lang = data.get("lang", "uz")
     user_id = message.from_user.id
-    page = 1  # Start with page 1
     items_per_page = 10
 
     async with state.proxy() as data:
-        data["search_query"] = genre
+        data["search_query"] = user_genre
         data["page"] = page
 
+    logger.info(f"Searching for genre: {user_genre}, page: {page}")
+
     try:
+        # Get all unique genres from the database
+        cursor.execute("SELECT DISTINCT genre FROM anime")
+        raw_genres = [genre[0].lower() for genre in cursor.fetchall() if genre[0]]
+        
+        # Split comma-separated genres into individual tags
+        all_genres = []
+        for genre in raw_genres:
+            all_genres.extend([g.strip() for g in genre.split(",") if g.strip()])
+        all_genres = list(set(all_genres))  # Remove duplicates
+        logger.info(f"All genre tags: {all_genres}")
+
+        # Find close matches for the user-input genre
+        matched_genres = []
+        if process and fuzz:
+            matches = process.extract(user_genre, all_genres, scorer=fuzz.token_sort_ratio, limit=5)
+            matched_genres = [match[0] for match in matches if match[1] >= 60]
+            logger.info(f"Fuzzy matched genres: {matches}")
+            # Add exact match if user_genre exists in all_genres
+            if user_genre in all_genres:
+                matched_genres.append(user_genre)
+        else:
+            # Fallback to exact match if fuzzywuzzy is not installed
+            matched_genres = [user_genre] if user_genre in all_genres else []
+            logger.warning("fuzzywuzzy not installed, using exact match")
+
+        matched_genres = list(set(matched_genres))  # Remove duplicates
+        logger.info(f"Final matched genres: {matched_genres}")
+
+        if not matched_genres:
+            await message.answer(
+                f"'{user_genre}' janrida anime topilmadi! Iltimos, boshqa janr kiriting." if lang == "uz" else
+                f"Аниме жанра '{user_genre}' не найдено! Попробуйте другой жанр."
+            )
+            return
+
+        # Build SQL query for matched genres
+        like_conditions = " OR ".join([f"LOWER(genre) LIKE ?" for _ in matched_genres])
+        query_params = [f"%{genre}%" for genre in matched_genres]
+
         # Count total matching anime for pagination
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT COUNT(*) 
             FROM anime 
-            WHERE genre LIKE ?
-        """, (f"%{genre}%",))
+            WHERE {like_conditions}
+        """, query_params)
         total_anime = cursor.fetchone()[0]
+        logger.info(f"Total anime found: {total_anime}")
 
         # Fetch anime for current page
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT anime_id, name, views 
             FROM anime 
-            WHERE genre LIKE ?
+            WHERE {like_conditions}
             ORDER BY views DESC
             LIMIT ? OFFSET ?
-        """, (f"%{genre}%", items_per_page, (page - 1) * items_per_page))
+        """, query_params + [items_per_page, (page - 1) * items_per_page])
         anime_list = cursor.fetchall()
+        logger.info(f"Animes fetched: {len(anime_list)}")
     except Exception as e:
+        logger.error(f"Database error: {str(e)}")
         await message.answer(
             "Ma'lumotlar bazasida xato yuz berdi!" if lang == "uz" else "Ошибка в базе данных!"
         )
@@ -663,12 +717,12 @@ async def handle_genre_search(message: types.Message, state: FSMContext):
             if page > 1:
                 nav_buttons.append(InlineKeyboardButton(
                     text="⬅️ Oldingi" if lang == "uz" else "⬅️ Предыдущая",
-                    callback_data=f"page_{page-1}_{genre}"
+                    callback_data=f"genre_page_{page-1}_{user_genre}"
                 ))
             if page * items_per_page < total_anime:
                 nav_buttons.append(InlineKeyboardButton(
                     text="Keyingi ➡️" if lang == "uz" else "Следующая ➡️",
-                    callback_data=f"page_{page+1}_{genre}"
+                    callback_data=f"genre_page_{page+1}_{user_genre}"
                 ))
             inline_keyboard.row(*nav_buttons)
 
@@ -676,13 +730,14 @@ async def handle_genre_search(message: types.Message, state: FSMContext):
             await dp.bot.send_message(
                 chat_id=user_id,
                 text=(
-                    f"'{genre}' janridagi animelar ro'yxati (sahifa {page}):"
+                    f"'{user_genre}' janridagi animelar ro'yxati (sahifa {page}):"
                     if lang == "uz" else
-                    f"Список аниме жанра '{genre}' (страница {page}):"
+                    f"Список аниме жанра '{user_genre}' (страница {page}):"
                 ),
                 reply_markup=inline_keyboard
             )
         except Exception as e:
+            logger.error(f"Message send error: {str(e)}")
             await message.answer(
                 "Xabar yuborishda xato yuz berdi!" if lang == "uz" else "Ошибка при отправке сообщения!"
             )
@@ -691,19 +746,23 @@ async def handle_genre_search(message: types.Message, state: FSMContext):
         await dp.bot.send_message(
             chat_id=user_id,
             text=(
-                f"'{genre}' janrida anime topilmadi!" if lang == "uz" else
-                f"Аниме жанра '{genre}' не найдено!"
+                f"'{user_genre}' janrida anime topilmadi!" if lang == "uz" else
+                f"Аниме жанра '{user_genre}' не найдено!"
             )
         )
 
     await User.menu.set()
 
-@dp.callback_query_handler(lambda c: c.data.startswith("page_"), state="*")
+@dp.callback_query_handler(lambda c: c.data.startswith("genre_page_"), state="*")
 async def handle_pagination(call: types.CallbackQuery, state: FSMContext):
     try:
-        _, page, genre = call.data.split("_", 2)
+        parts = call.data.split("_", 3)
+        if len(parts) != 4:
+            raise ValueError("Invalid callback data format")
+        _, _, page, genre = parts
         page = int(page)
-    except (IndexError, ValueError):
+    except (IndexError, ValueError) as e:
+        logger.error(f"Pagination error: {str(e)}")
         await call.answer("Noto'g'ri sahifa formati!", show_alert=True)
         return
 
@@ -711,7 +770,9 @@ async def handle_pagination(call: types.CallbackQuery, state: FSMContext):
         data["page"] = page
         data["search_query"] = genre
 
-    # Simulate message to reuse handle_genre_search
+    await call.message.delete()
+
+    # Create a fake message to reuse handle_genre_search
     class FakeMessage:
         def __init__(self, text, from_user):
             self.text = text
@@ -719,11 +780,12 @@ async def handle_pagination(call: types.CallbackQuery, state: FSMContext):
 
     await handle_genre_search(
         FakeMessage(text=genre, from_user=call.from_user),
-        state
+        state,
+        page=page
     )
-    await call.message.delete()
     await call.answer()
 
+# handle_anime_selection remains unchanged as it already handles anime selection
 @dp.callback_query_handler(text_contains="search_top_10", state=User.searching)
 async def handle_search_top_10(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
