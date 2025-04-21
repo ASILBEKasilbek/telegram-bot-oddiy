@@ -465,6 +465,7 @@ async def start(msg:types.Message ,state : FSMContext):
 <b>🔥Qaysi turdagi obunani sotib olishni istaysiz ?</b>
 """
                await msg.answer(text,reply_markup=which_vip_clbtn())
+               await User.menu.set()
 
          
           elif text == "🔍Anime Qidirish":
@@ -541,7 +542,7 @@ async def start(msg:types.Message ,state : FSMContext):
                
                else:
                     message = "<b>Sizda ⚡️AniPass mavjud emas yoki muddati aniqlanmadi.</b>"
-
+               print(is_vip)
                await msg.answer(message, reply_markup=user_button_btn(lang, is_vip))
 
           vip = data.get("vip")
