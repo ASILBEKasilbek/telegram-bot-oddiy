@@ -546,7 +546,6 @@ def get_random_anime_sql():
         return []
 
 
-from difflib import SequenceMatcher
 
 def similar(a, b):
     return SequenceMatcher(None, a.lower(), b.lower()).ratio()
@@ -555,6 +554,13 @@ def search_anime_base(prompt):
     prompt = prompt.strip().lower()
     cursor.row_factory = sqlite3.Row
 
+    # Agar prompt son bo'lsa (ya'ni anime_id bo'lsa)
+    if prompt.isdigit():
+        anime_by_id = cursor.execute("SELECT * FROM anime WHERE anime_id = ?", (int(prompt),)).fetchone()
+        if anime_by_id:
+            return [anime_by_id]  # Ro'yxat ko'rinishida qaytaramiz
+
+    # FTS5 orqali qidiruv
     fts_query = """
         SELECT anime.* FROM anime
         JOIN anime_fts ON anime.anime_id = anime_fts.rowid
@@ -567,25 +573,28 @@ def search_anime_base(prompt):
     except Exception as e:
         print("FTS5 xato:", e)
 
+    # LIKE orqali qidiruv
     like_query = """
         SELECT * FROM anime
         WHERE LOWER(name) LIKE ? OR LOWER(genre) LIKE ?
     """
     like_results = cursor.execute(like_query, [f"%{prompt}%", f"%{prompt}%"]).fetchall()
+
+    # similar orqali aniqlik kiritish
     similar_results = []
     for row in like_results:
         name_words = row["name"].lower().split()
         genre_tags = str(row["genre"]).lower().split(",")
-        tegs = str(row[6]).split(",")
-        k=0
-        for a in tegs:
-            similarity = similar(prompt,a)
-        
-            if similarity >= 0.6:
+        tegs = str(row["teg"]).lower().split(",") if row["teg"] else []
+
+        found = False
+        for tag in tegs:
+            if similar(prompt, tag) >= 0.6:
                 similar_results.append(row)
-                k=1
+                found = True
                 break
-        if k==0:
+
+        if not found:
             for word in name_words + genre_tags:
                 word = word.strip()
                 if similar(prompt, word) >= 0.6:
@@ -664,8 +673,6 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
         conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
         conn.commit()
 
-# which_anime_value = 71  # misol uchun
-# serie_num_value = 10    # misol uchun
 def get_seria_id(which_anime_value,serie_num_value):
     cursor = conn.execute("""
         SELECT serie_id 
@@ -676,15 +683,13 @@ def get_seria_id(which_anime_value,serie_num_value):
     result = cursor.fetchone()
     if result:
         serie_id = result[0]
-        # print("Serie ID:", serie_id)
         return serie_id
     else:
-        # print("Bunday malumot topilmadi.")
         return "Bunday malumot topilmadi"
     
 
 add_column_if_not_exists(conn, 'about_user', 'free', 'INTEGER DEFAULT 0')
 add_column_if_not_exists(conn, 'about_user', 'is_blocked', 'INTEGER DEFAULT 0')
 
-creating_table() # avval jadval yaratish
-update_statistics()  # statistika yozish
+creating_table()
+update_statistics()  

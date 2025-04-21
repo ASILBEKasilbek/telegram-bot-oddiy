@@ -7,19 +7,15 @@ def user_button_btn(lang,is_vip):
     
     cheker = ReplyKeyboardMarkup()
     if is_vip=="True":
-            
         cheker.add(KeyboardButton(buttons[0]),KeyboardButton(buttons[3]))
         cheker.add(KeyboardButton(buttons[4]),KeyboardButton(buttons[5]))
         cheker.add(KeyboardButton(buttons[1]),KeyboardButton(buttons[2]))
-        # cheker.add(KeyboardButton(buttons[7]))
         cheker.resize_keyboard = True  
-        
         return cheker
-    elif is_vip=="False":
+    else:
         cheker.add(KeyboardButton(buttons[0]),KeyboardButton(buttons[3]))
         cheker.add(KeyboardButton(buttons[1]),KeyboardButton(buttons[2]))
         cheker.add(KeyboardButton(buttons[5]))
-        # cheker.add(KeyboardButton(buttons[7]))
         cheker.resize_keyboard = True  
         return cheker
 
