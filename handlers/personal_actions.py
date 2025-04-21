@@ -39,7 +39,7 @@ class User(StatesGroup):
      watching_film = State()
 
      films = State()
-
+     genre_input = State()
      buying_vip = State()
      buying_lux= State()
 
@@ -454,11 +454,6 @@ async def start(msg:types.Message ,state : FSMContext):
           await msg.answer(text)
 
      if is_vip == "False":
-
-          # if text == "Tasodifiy anime":
-          #      await msg.answer("Tasodifiy anime tugmasini bosing")
-          #      await User.tasodifiy.set()
-
           if text == "⚡️AniPass" or text == "⚡️AniPass":
                is_vip = get_user_is_vip_base(user_id)
                text = f"""
@@ -466,8 +461,7 @@ async def start(msg:types.Message ,state : FSMContext):
 """
                await msg.answer(text,reply_markup=which_vip_clbtn())
                await User.menu.set()
-
-         
+   
           elif text == "🔍Anime Qidirish":
                await msg.answer(
                     "<b>🔍 Qidirish uchun anime nomi yoki ID sini yuboring!</b>",
@@ -479,7 +473,6 @@ async def start(msg:types.Message ,state : FSMContext):
      
     
      elif is_vip =="True":
-
 
           if text == "🔍Anime Qidirish" or text == "🔍Запросить аниме":
                await msg.answer("<b>Qidiruv turini tanlang!</b>",reply_markup=search_clbtn(),parse_mode="HTML")
@@ -535,7 +528,6 @@ async def start(msg:types.Message ,state : FSMContext):
                               f"<b>Qolgan vaqt:</b> {days_left} kun, {hours_left} soat, {minutes_left} daqiqa"
                          )
                     else:
-                         # send_expiration_message(user_id)
                          message = (
                               f"<b>Sizdagi ⚡️AniPass muddati tugagan!</b>\n"
                          )
@@ -602,10 +594,136 @@ async def handle_search_tag(call: types.CallbackQuery, state: FSMContext):
      await call.message.answer(anime_menu_message(lang,result),reply_markup=anime_menu_clbtn(lang,anime_id,False,have_serie,is_vip))
      await call.answer()  
 
-@dp.callback_query_handler(text_contains='search_anime_id',state=User.searching)
-async def start(call: types.CallbackQuery,state:FSMContext):
-     pass
- 
+
+@dp.callback_query_handler(text_contains='search_anime_id', state=User.searching)
+async def prompt_genre_input(call: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    lang = data.get("lang", "uz")
+    
+    await call.message.delete()
+    await call.message.answer(
+        "Iltimos, qidirish uchun anime janrini kiriting:" if lang == "uz" else
+        "Пожалуйста, введите жанр аниме для поиска:"
+    )
+    
+    await User.genre_input.set()
+    await call.answer()
+
+@dp.message_handler(state=User.genre_input)
+async def handle_genre_search(message: types.Message, state: FSMContext):
+    genre = message.text.strip()
+    data = await state.get_data()
+    lang = data.get("lang", "uz")
+    user_id = message.from_user.id
+    page = 1  # Start with page 1
+    items_per_page = 10
+
+    async with state.proxy() as data:
+        data["search_query"] = genre
+        data["page"] = page
+
+    try:
+        # Count total matching anime for pagination
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM anime 
+            WHERE genre LIKE ?
+        """, (f"%{genre}%",))
+        total_anime = cursor.fetchone()[0]
+
+        # Fetch anime for current page
+        cursor.execute("""
+            SELECT anime_id, name, views 
+            FROM anime 
+            WHERE genre LIKE ?
+            ORDER BY views DESC
+            LIMIT ? OFFSET ?
+        """, (f"%{genre}%", items_per_page, (page - 1) * items_per_page))
+        anime_list = cursor.fetchall()
+    except Exception as e:
+        await message.answer(
+            "Ma'lumotlar bazasida xato yuz berdi!" if lang == "uz" else "Ошибка в базе данных!"
+        )
+        return
+
+    if anime_list:
+        inline_keyboard = InlineKeyboardMarkup(row_width=1)
+        for anime in anime_list:
+            anime_id, anime_name, views = anime
+            callback_data = f"anime_select_{anime_id}"
+            button = InlineKeyboardButton(
+                text=f"{anime_name} - {views} ko'rish" if lang == "uz" else f"{anime_name} - {views} просмотров",
+                callback_data=callback_data
+            )
+            inline_keyboard.add(button)
+
+        # Add pagination buttons if needed
+        if total_anime > items_per_page:
+            nav_buttons = []
+            if page > 1:
+                nav_buttons.append(InlineKeyboardButton(
+                    text="⬅️ Oldingi" if lang == "uz" else "⬅️ Предыдущая",
+                    callback_data=f"page_{page-1}_{genre}"
+                ))
+            if page * items_per_page < total_anime:
+                nav_buttons.append(InlineKeyboardButton(
+                    text="Keyingi ➡️" if lang == "uz" else "Следующая ➡️",
+                    callback_data=f"page_{page+1}_{genre}"
+                ))
+            inline_keyboard.row(*nav_buttons)
+
+        try:
+            await dp.bot.send_message(
+                chat_id=user_id,
+                text=(
+                    f"'{genre}' janridagi animelar ro'yxati (sahifa {page}):"
+                    if lang == "uz" else
+                    f"Список аниме жанра '{genre}' (страница {page}):"
+                ),
+                reply_markup=inline_keyboard
+            )
+        except Exception as e:
+            await message.answer(
+                "Xabar yuborishda xato yuz berdi!" if lang == "uz" else "Ошибка при отправке сообщения!"
+            )
+            return
+    else:
+        await dp.bot.send_message(
+            chat_id=user_id,
+            text=(
+                f"'{genre}' janrida anime topilmadi!" if lang == "uz" else
+                f"Аниме жанра '{genre}' не найдено!"
+            )
+        )
+
+    await User.menu.set()
+
+@dp.callback_query_handler(lambda c: c.data.startswith("page_"), state="*")
+async def handle_pagination(call: types.CallbackQuery, state: FSMContext):
+    try:
+        _, page, genre = call.data.split("_", 2)
+        page = int(page)
+    except (IndexError, ValueError):
+        await call.answer("Noto'g'ri sahifa formati!", show_alert=True)
+        return
+
+    async with state.proxy() as data:
+        data["page"] = page
+        data["search_query"] = genre
+
+    # Simulate message to reuse handle_genre_search
+    class FakeMessage:
+        def __init__(self, text, from_user):
+            self.text = text
+            self.from_user = from_user
+
+    await handle_genre_search(
+        FakeMessage(text=genre, from_user=call.from_user),
+        state
+    )
+    await call.message.delete()
+    await call.answer()
+
 @dp.callback_query_handler(text_contains="search_top_10", state=User.searching)
 async def handle_search_top_10(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
@@ -651,8 +769,6 @@ async def handle_search_top_10(call: types.CallbackQuery, state: FSMContext):
 
     await User.menu.set()
     await call.answer()
-
-
 
 @dp.callback_query_handler(lambda c: c.data.startswith("anime_select_"), state="*")
 async def handle_anime_selection(call: types.CallbackQuery, state: FSMContext):
