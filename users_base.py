@@ -548,19 +548,18 @@ def get_random_anime_sql():
 
 
 def similar(a, b):
+    """Ikki matn o'rtasidagi o'xshashlikni hisoblash (0-1 oraliqda)."""
     return SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
 def search_anime_base(prompt):
     prompt = prompt.strip().lower()
+    cursor = conn.cursor()
     cursor.row_factory = sqlite3.Row
 
-    # Agar prompt son bo'lsa (ya'ni anime_id bo'lsa)
     if prompt.isdigit():
         anime_by_id = cursor.execute("SELECT * FROM anime WHERE anime_id = ?", (int(prompt),)).fetchone()
         if anime_by_id:
-            return [anime_by_id]  # Ro'yxat ko'rinishida qaytaramiz
-
-    # FTS5 orqali qidiruv
+            return [anime_by_id]  
     fts_query = """
         SELECT anime.* FROM anime
         JOIN anime_fts ON anime.anime_id = anime_fts.rowid
@@ -572,23 +571,23 @@ def search_anime_base(prompt):
             return results
     except Exception as e:
         print("FTS5 xato:", e)
-
-    # LIKE orqali qidiruv
     like_query = """
         SELECT * FROM anime
-        WHERE LOWER(name) LIKE ? OR LOWER(genre) LIKE ?
+        WHERE LOWER(name) LIKE ? 
+           OR LOWER(genre) LIKE ? 
+           OR LOWER(teg) LIKE ?
     """
-    like_results = cursor.execute(like_query, [f"%{prompt}%", f"%{prompt}%"]).fetchall()
+    like_results = cursor.execute(like_query, [f"%{prompt}%", f"%{prompt}%", f"%{prompt}%"]).fetchall()
 
-    # similar orqali aniqlik kiritish
     similar_results = []
     for row in like_results:
         name_words = row["name"].lower().split()
-        genre_tags = str(row["genre"]).lower().split(",")
+        genre_tags = str(row["genre"]).lower().split(",") if row["genre"] else []
         tegs = str(row["teg"]).lower().split(",") if row["teg"] else []
 
         found = False
         for tag in tegs:
+            tag = tag.strip()
             if similar(prompt, tag) >= 0.6:
                 similar_results.append(row)
                 found = True
@@ -601,8 +600,13 @@ def search_anime_base(prompt):
                     similar_results.append(row)
                     break
 
-    return similar_results
+    similar_results.sort(key=lambda row: max(
+        [similar(prompt, tag.strip()) for tag in str(row["teg"]).lower().split(",") if tag.strip()] +
+        [similar(prompt, word.strip()) for word in row["name"].lower().split()] +
+        [similar(prompt, genre.strip()) for genre in str(row["genre"]).lower().split(",") if genre.strip()]
+    ), reverse=True)
 
+    return similar_results
 def add_anime_base(lang,treller_id,name,about,genre,teg,dub,series = 0,films = 0,is_vip = 0,status = "loading",views = 0):
     cursor.execute('INSERT INTO anime (lang,treller_id,name,about,genre,teg,dub,series,films,is_vip,status,views) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);', (lang,treller_id,name,about,genre,teg,dub,series,films,is_vip,status,views))
     conn.commit()
