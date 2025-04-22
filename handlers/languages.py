@@ -127,6 +127,7 @@ def about_bot_message(lang,user_id):
 ⚡️<b>AniPass</b> - Botdan erkin foydalana olish imkonyatini beradi  .
 -
 🧑‍💻<b>Admin</b> - @Aniduble_admin
+👨‍🔧<b>Dasturchi</b> - @dasturch1_asilbek
 -
 <b>🆔Botdagi ID ingiz :</b> <code>{user_id}</code>
 """
