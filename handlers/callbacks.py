@@ -264,43 +264,47 @@ def film_menu_clbtn(lang,film_id,is_about,have_serie):
         
     return cheker
 
-def anime_series_clbtn(now_serie,series,page = 0):
+def anime_series_clbtn(now_serie, series, page=0):
     cheker = InlineKeyboardMarkup()
     
-    count = 0
-    counting = 0
-    paging = page * 20 + 1
+    # Paginatorni hisoblash
+    paging = page * 20
     last_serie = 0
+    anime_id = None
+    series_to_show = []
 
-    if paging == 0:
-        paging = 1
-        
+    # Seriyalarni filtrlash va ko'rsatish
     for i in series:
-        counting += 1
-        if i[2] >= paging:
-            count += 1
-            if count <= 20:
-                if now_serie == i[2]:
-                    cheker.insert(InlineKeyboardButton(f"💿 - [ {i[2]} ]",callback_data=f'watching,now')) 
-                else:
-                    cheker.insert(InlineKeyboardButton(f"{i[2]}",callback_data=f'watching,watch,{i[1]},{i[2]},{i[3]},{i[0]},{page}'))
-                last_serie = i[2]
-                anime_id = i[0]
-            else:
-                pass
+        if i[2] >= paging and len(series_to_show) < 20:
+            series_to_show.append(i)
 
-    if counting <= 20:
-        cheker.add(InlineKeyboardButton("🔙Ortga",callback_data=f'watching,back,{i[0]}'))
+    # Har bir seriyani inline tugma sifatida qo'shish
+    for i in series_to_show:
+        button_text = f"💿 - [ {i[2]} ]" if now_serie == i[2] else f"{i[2]}"
+        callback_data = f'watching,now' if now_serie == i[2] else f'watching,watch,{i[1]},{i[2]},{i[3]},{i[0]},{page}'
+        cheker.insert(InlineKeyboardButton(button_text, callback_data=callback_data))
 
+        last_serie = i[2]
+        anime_id = i[0]  # Oxirgi anime_id
+
+    # Ortga va navigatsiya tugmalari
+    if len(series_to_show) < 20:
+        cheker.add(InlineKeyboardButton("🔙Ortga", callback_data=f'watching,back,{anime_id}'))
     else:
-        if page == 0 and counting >= 5:
-            cheker.add(InlineKeyboardButton("⏩",callback_data=f'watching,next,{page+1},{i[0]},{now_serie}'))
-        elif counting > last_serie:
-            cheker.add(InlineKeyboardButton("⏪",callback_data=f'watching,previous,{page-1},{i[0]},{now_serie}'),InlineKeyboardButton("⏩",callback_data=f'watching,next,{page+1},{i[0]},{now_serie}'))
+        # Agar 1-chi sahifa bo'lsa
+        if page == 0:
+            cheker.add(InlineKeyboardButton("⏩", callback_data=f'watching,next,{page+1},{anime_id},{now_serie}'))
+        # Agar keyingi sahifaga o'tish kerak bo'lsa
+        elif len(series) > last_serie:
+            cheker.add(
+                InlineKeyboardButton("⏪", callback_data=f'watching,previous,{page-1},{anime_id},{now_serie}'),
+                InlineKeyboardButton("⏩", callback_data=f'watching,next,{page+1},{anime_id},{now_serie}')
+            )
+        # Faqat orqaga qaytish tugmasi
         else:
-            cheker.add(InlineKeyboardButton("⏪",callback_data=f'watching,previous,{page-1},{i[0]},{now_serie}'))
+            cheker.add(InlineKeyboardButton("⏪", callback_data=f'watching,previous,{page-1},{anime_id},{now_serie}'))
 
-        cheker.add(InlineKeyboardButton("🔙Ortga",callback_data=f'watching,back,{anime_id}'))
+        cheker.add(InlineKeyboardButton("🔙Ortga", callback_data=f'watching,back,{anime_id}'))
 
     return cheker
 

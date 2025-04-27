@@ -563,6 +563,7 @@ async def start(call: types.CallbackQuery,state : FSMContext):
      await call.message.delete()
      await call.message.answer("🔍Qidirish uchun anime nomi yoki ID sini yuboring !",reply_markup=back_user_button_btn(lang))
      await User.searching.set()
+
 @dp.callback_query_handler(text_contains="search_teg", state=User.searching)
 async def handle_search_tag(call: types.CallbackQuery, state: FSMContext):
      data = await state.get_data()
@@ -600,9 +601,6 @@ async def handle_search_tag(call: types.CallbackQuery, state: FSMContext):
      await call.answer()  
 
 
-
-
-# Logging sozlamalari
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -785,7 +783,6 @@ async def handle_pagination(call: types.CallbackQuery, state: FSMContext):
     )
     await call.answer()
 
-# handle_anime_selection remains unchanged as it already handles anime selection
 @dp.callback_query_handler(text_contains="search_top_10", state=User.searching)
 async def handle_search_top_10(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
@@ -889,7 +886,6 @@ async def handle_anime_selection(call: types.CallbackQuery, state: FSMContext):
 
     await User.anime_menu.set()
     await call.answer()
-
 
 
 @dp.message_handler(content_types=["photo"], state=User.search_by_photo)
