@@ -281,8 +281,10 @@ def anime_series_clbtn(now_serie, series, page=0):
     # Ortga va navigatsiya tugmalari
     anime_id = series_to_show[-1][0] if series_to_show else None  # Oxirgi anime_id
 
-    if len(series_to_show) < 20:
+    # Agar oxirgi sahifaga yetgan bo'lsa, ortga qaytish tugmasini qo'shamiz
+    if len(series_to_show) < 20 and page > 0:
         cheker.add(InlineKeyboardButton("🔙Ortga", callback_data=f'watching,back,{anime_id}'))
+
     else:
         # Sahifa navigatsiyasi
         if page == 0:
