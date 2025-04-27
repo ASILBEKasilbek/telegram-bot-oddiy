@@ -266,17 +266,11 @@ def film_menu_clbtn(lang,film_id,is_about,have_serie):
 
 def anime_series_clbtn(now_serie, series, page=0):
     cheker = InlineKeyboardMarkup()
-    
-    # Paginatorni hisoblash
-    paging = page * 20
-    last_serie = 0
-    anime_id = None
-    series_to_show = []
 
-    # Seriyalarni filtrlash va ko'rsatish
-    for i in series:
-        if i[2] >= paging and len(series_to_show) < 20:
-            series_to_show.append(i)
+    # Paginatorni hisoblash
+    paging_start = page * 20
+    paging_end = paging_start + 20
+    series_to_show = series[paging_start:paging_end]
 
     # Har bir seriyani inline tugma sifatida qo'shish
     for i in series_to_show:
@@ -284,29 +278,26 @@ def anime_series_clbtn(now_serie, series, page=0):
         callback_data = f'watching,now' if now_serie == i[2] else f'watching,watch,{i[1]},{i[2]},{i[3]},{i[0]},{page}'
         cheker.insert(InlineKeyboardButton(button_text, callback_data=callback_data))
 
-        last_serie = i[2]
-        anime_id = i[0]  # Oxirgi anime_id
-
     # Ortga va navigatsiya tugmalari
+    anime_id = series_to_show[-1][0] if series_to_show else None  # Oxirgi anime_id
+
     if len(series_to_show) < 20:
         cheker.add(InlineKeyboardButton("🔙Ortga", callback_data=f'watching,back,{anime_id}'))
     else:
-        # Agar 1-chi sahifa bo'lsa
+        # Sahifa navigatsiyasi
         if page == 0:
             cheker.add(InlineKeyboardButton("⏩", callback_data=f'watching,next,{page+1},{anime_id},{now_serie}'))
-        # Agar keyingi sahifaga o'tish kerak bo'lsa
-        elif len(series) > last_serie:
+        else:
             cheker.add(
                 InlineKeyboardButton("⏪", callback_data=f'watching,previous,{page-1},{anime_id},{now_serie}'),
                 InlineKeyboardButton("⏩", callback_data=f'watching,next,{page+1},{anime_id},{now_serie}')
             )
-        # Faqat orqaga qaytish tugmasi
-        else:
-            cheker.add(InlineKeyboardButton("⏪", callback_data=f'watching,previous,{page-1},{anime_id},{now_serie}'))
-
+        
         cheker.add(InlineKeyboardButton("🔙Ortga", callback_data=f'watching,back,{anime_id}'))
 
     return cheker
+
+
 
 def back_button_clbtn(call):
     if not call:
