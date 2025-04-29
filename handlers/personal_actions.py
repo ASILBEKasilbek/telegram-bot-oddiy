@@ -53,21 +53,12 @@ class User(StatesGroup):
      tasodifiy= State()
 
 async def check_premium_func(user_id):
-     user = get_user_base(user_id)  # Assuming this function fetches the user data
-     print(user)  # Print the user data for debugging purposes
-     
-     # Ensure 'user' is not empty and contains at least one item
+     user = get_user_base(user_id)  
      if user and len(user) > 0 and len(user[0]) > 5:
-          # Access the 6th element if the list is long enough
           vip = user[0][5]
      else:
-          # Handle the case where the list is shorter than expected or data is missing
-          vip = "0"  # Or some other default value
-
-     # lux = user[0][6]
-
+          vip = "0"  
      is_vip = "True"
-     # is_lux = "True"
      if vip != "0":
           expire_time = datetime.strptime(vip, "%Y-%m-%d")
           now = datetime.now()
@@ -105,25 +96,6 @@ async def check_premium_func(user_id):
                else:
                     is_vip = "True"
           
-          # if is_lux == "True":
-          #      is_lux_user = datetime.strptime(lux, "%Y-%m-%d")
-
-          #      if today2 >= is_lux_user:
-
-          #           update_user_free_lux_base(user_id)
-
-          #           try:
-          #                await dp.bot.kick_chat_member(chat_id=-1002131546047,user_id=user_id)
-          #           except:
-          #                pass
-
-          #           text = "<b>‼️Sizdagi 💎Lux obuna muddati o'z nihoyasiga yetdi !</b>"
-          #           try:
-          #                a = await dp.bot.send_message(chat_id=user_id,text=text)
-          #                await a.pin()
-          #           except:
-          #                pass
-
      return is_vip
 
 @dp.message_handler(commands="start",state="*")
@@ -555,7 +527,9 @@ async def start(call: types.CallbackQuery,state : FSMContext):
      
      await call.message.delete()
      await call.message.answer("🔍Nomini topa olmayotgan animeingizni Rasmini yuboring",reply_markup=back_user_button_btn(lang))
+     print(90)
      await User.search_by_photo.set()
+     print(91)
 
 @dp.callback_query_handler(text_contains = "search_id_name",state=User.searching)
 async def start(call: types.CallbackQuery,state : FSMContext):
@@ -887,50 +861,65 @@ async def handle_anime_selection(call: types.CallbackQuery, state: FSMContext):
     await User.anime_menu.set()
     await call.answer()
 
+@dp.message_handler(state=User.search_by_photo)
+async def start(msg: types.Message, state: FSMContext):
+     text = msg.text
+     lang = (await state.get_data()).get("lang")
+     user_id = msg.from_user.id
+     is_vip = await check_premium_func(user_id)
+     if text == "🔙Ortga":
+          await state.finish()
+          await User.menu.set()
+          async with state.proxy() as data:
+               data["lang"] = lang
+
+          await msg.answer("🔥",reply_markup=user_button_btn(lang,is_vip))
+
 
 @dp.message_handler(content_types=["photo"], state=User.search_by_photo)
 async def start(msg: types.Message, state: FSMContext):
-    lang = (await state.get_data()).get("lang")
 
-    try:
-        shutil.rmtree(f"anime_image_{msg.from_user.id}")
-    except:
-        pass
+     lang = (await state.get_data()).get("lang")
 
-    try:
-        path = f"anime_image_{msg.from_user.id}/anime.jpg"
-        a = await msg.answer("♻️<b>Serverga yuklanmoqda</b> . . .")
-        await msg.photo[-1].download(destination_file=path)
+     try:
+          shutil.rmtree(f"anime_image_{msg.from_user.id}")
+     except:
+          pass
 
-        # Rasmni o‘qiymiz
-        with open(path, "rb") as f:
-            image_bytes = f.read()
+     try:
+          path = f"anime_image_{msg.from_user.id}/anime.jpg"
+          a = await msg.answer("♻️<b>Serverga yuklanmoqda</b> . . .")
+          await msg.photo[-1].download(destination_file=path)
 
-        result = await handle_photo_from_file(image_bytes, BOT_TOKEN)
-        await User.menu.set()
+          with open(path, "rb") as f:
+               image_bytes = f.read()
 
-        if "error" in result:
-            await msg.answer(result["error"])
-            return
+          result = await handle_photo_from_file(image_bytes, BOT_TOKEN)
+          await User.menu.set()
 
-        await a.delete()
+          if "error" in result:
+               await msg.answer(result["error"])
+               return
 
-        caption = (
-            f"🎌 Anime topildi!\n"
-            f"📛 <b>Nomi</b>: {result['uzbek_title']}\n"
-            f"🎞 <b>Epizod</b>: {result['episode']}\n"
-            f"🕒 <b>Vaqti</b>: {result['minutes']} daqiqa {result['seconds']} soniya\n"
-            f"🎯 <b>Aniqlik</b>: {result['similarity']}%\n"
-            f"🏷 <b>Janr</b>: {result['genre']}"
-        )
+          await a.delete()
 
-        await msg.answer_photo(photo=result["image"], caption=caption)
-        if result.get("video"):
-            await msg.answer_video(video=result["video"])
+          caption = (
+               f"🎌 Anime topildi!\n"
+               f"📛 <b>Nomi</b>: {result['uzbek_title']}\n"
+               f"🎞 <b>Epizod</b>: {result['episode']}\n"
+               f"🕒 <b>Vaqti</b>: {result['minutes']} daqiqa {result['seconds']} soniya\n"
+               f"🎯 <b>Aniqlik</b>: {result['similarity']}%\n"
+               f"🏷 <b>Janr</b>: {result['genre']}"
+          )
 
-        shutil.rmtree(f"anime_image_{msg.from_user.id}")
-    except:
-        await msg.answer(error_try_again_message(lang))
+          await msg.answer_photo(photo=result["image"], caption=caption)
+          if result.get("video"):
+               await msg.answer_video(video=result["video"])
+
+          shutil.rmtree(f"anime_image_{msg.from_user.id}")
+     except:
+          await msg.answer(error_try_again_message(lang))
+
 
 @dp.message_handler(state=[User.searching,User.anime_menu,User.watching])
 async def start(msg:types.Message ,state : FSMContext):

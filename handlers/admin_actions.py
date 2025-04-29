@@ -226,7 +226,6 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
         await call.message.edit_text(f"'{anime_name}' animening qaysi qismini post qilamiz?", reply_markup=series_buttons)
         return
     
-    # Kanal ID sini olish
     channel_id = int(call.data.split("_")[1])
     channels = get_channels()
     selected_channel = None
@@ -291,8 +290,7 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
             reply_markup=serie_post_link_clbtn(anime_id)
         )
         await call.message.edit_text(
-            f"✅ '{anime_name}' {serie_num}-qismi zo'r yuborildi! 🚀",
-            reply_markup=back_button_inline()
+            f"✅ '{anime_name}' {serie_num}-qismi zo'r yuborildi! 🚀"
         )
     except types.exceptions.ChatNotFound:
         await call.message.edit_text(
@@ -466,7 +464,6 @@ async def start(msg:types.Message ,state : FSMContext):
         a = await msg.answer("⌛️", reply_markup=back_button_btn())  # Yuklanayotgan xabar
         await a.delete()  # Yuklanayotgan xabarni o'chirish
         await msg.answer("/start ni bosing ✅")  # Asosiy menyuga qaytish
-
 
 @dp.message_handler(content_types=['text'], state=Add_sponser.add)
 async def qosh(msg: types.Message, state: FSMContext):
