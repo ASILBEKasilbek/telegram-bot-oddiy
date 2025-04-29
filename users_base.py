@@ -2,9 +2,12 @@ import sqlite3
 from difflib import SequenceMatcher
 from datetime import datetime, timedelta
 import random
+import os 
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # users_base.py joylashgan joy
+db_path = os.path.join(BASE_DIR, 'database.db')
 
-conn = sqlite3.connect('database.db', timeout=10)
+conn = sqlite3.connect(db_path, timeout=10)
 cursor = conn.cursor()
 
 def creating_table():
@@ -93,6 +96,11 @@ SELECT anime_id, name, genre FROM anime;
 """)
 
     conn.commit()
+    
+def user_exists(user_id):
+    cursor.execute("SELECT 1 FROM about_user WHERE user_id = ?", (user_id,))
+    return cursor.fetchone() is not None
+
 def update_statistics():
     today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -229,7 +237,6 @@ def update_most_watched_active():
     """, (most_watched, most_active))
     conn.commit()
 
-# Foydalanuvchi qo‘shilganda
 def add_user_base(user_id, username, lang, gender=None, age=0, is_vip=0, is_lux=0, is_admin=False, is_staff=False):
     cursor.execute('INSERT INTO about_user (user_id, username, lang, gender, age, is_vip, is_lux, is_admin, is_staff, created_at, last_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);', (user_id, username, lang, gender, age, is_vip, is_lux, is_admin, is_staff))
     conn.commit()
@@ -307,7 +314,6 @@ def add_extended_statistics():
         print("AniDuble statistikasi allaqachon mavjud.")
     
     conn.commit()
-
 
 def update_statistics_anime_base():
     cursor.execute(f"""UPDATE statistics_new SET anime_count = anime_count + 1 WHERE name = 'AniDuble' """)
@@ -392,9 +398,11 @@ def get_sponsor():
     data = cursor.fetchall()
     conn.commit()
     return data
+
 def add_channels_base(name , link,added_by,date_added):
     cursor.execute('INSERT INTO channels (name, link, added_by, date_added) VALUES (?, ?, ?, ?);',(name, link, added_by, date_added))
     conn.commit()
+
 def remove_channel_base(link_or_username):
     # Tozalash
     if link_or_username.startswith("https://t.me/"):
@@ -545,8 +553,6 @@ def get_random_anime_sql():
     else:
         return []
 
-
-
 def similar(a, b):
     """Ikki matn o'rtasidagi o'xshashlikni hisoblash (0-1 oraliqda)."""
     return SequenceMatcher(None, a.lower(), b.lower()).ratio()
@@ -607,6 +613,7 @@ def search_anime_base(prompt):
     ), reverse=True)
 
     return similar_results
+
 def add_anime_base(lang,treller_id,name,about,genre,teg,dub,series = 0,films = 0,is_vip = 0,status = "loading",views = 0):
     cursor.execute('INSERT INTO anime (lang,treller_id,name,about,genre,teg,dub,series,films,is_vip,status,views) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);', (lang,treller_id,name,about,genre,teg,dub,series,films,is_vip,status,views))
     conn.commit()
@@ -641,8 +648,6 @@ def update_anime_views_base(anime_id):
     cursor.execute(f"""UPDATE anime SET views = views + 1 WHERE anime_id = {anime_id} """)
     conn.commit()
 
-# add_statistics_base()
-
 def update_free_status(user_id, free_value):
     try:
         conn.execute("""
@@ -669,6 +674,7 @@ def get_free_status(user_id):
     except Exception as e:
         print(f"Xatolik yuz berdi: {e}")
         return None
+
 def add_column_if_not_exists(conn, table_name, column_name, column_type):
     cursor = conn.cursor()
     cursor.execute(f"PRAGMA table_info({table_name})")
@@ -697,3 +703,36 @@ add_column_if_not_exists(conn, 'about_user', 'is_blocked', 'INTEGER DEFAULT 0')
 
 creating_table()
 update_statistics()  
+
+
+quality = "720p"
+cursor = conn.execute("SELECT anime_id FROM anime WHERE anime_id <= 71")
+result = cursor.fetchall()
+which_anime = [row[0] for row in result]
+
+which_anime.sort(reverse=True)
+serie_id = 1570
+def get_series_by_anime_id(anime_id):
+    cursor = conn.execute("SELECT series FROM anime WHERE anime_id = ?", (anime_id,))
+    result = cursor.fetchone()
+    if result:
+        return result[0]  
+    return None 
+
+
+def check_series(anime_id, seria_num):
+    cursor = conn.execute(
+        "SELECT 1 FROM series WHERE which_anime = ? AND serie_num = ? LIMIT 1",
+        (anime_id, seria_num)
+    )
+    result = cursor.fetchone()
+    return result is not None
+
+for i in which_anime:
+    seria=get_series_by_anime_id(i)
+    for j in range(1,seria+1):
+        if check_series(i, j):
+            continue
+        else:
+            add_serie_base(i, serie_id, j, quality)
+            serie_id -= 1

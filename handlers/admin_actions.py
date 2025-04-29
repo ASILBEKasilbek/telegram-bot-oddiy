@@ -86,14 +86,7 @@ class Add_sponser(StatesGroup):
     add =   State()
     remove = State()
 
-# Qismli post boshlash
-# @dp.message_handler(lambda msg: msg.text == "Qismli post", state="*")
-# async def qismli_post_start(msg: types.Message, state: FSMContext):
-#     await state.finish()
-#     await Posting.select_anime.set()
-#     await msg.answer("Qaysi animeni qismini post qilamiz?", reply_markup=back_button_btn())
 
-# Anime tanlash
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -106,27 +99,23 @@ async def select_anime_for_post(msg: types.Message, state: FSMContext):
         await msg.answer("Bosh menyuga qaytildi.", reply_markup=admin_button_btn())
         return
     
-    # Animenni bazadan izlash
     anime_data = search_anime_base(anime_name)
     if not anime_data:
         await msg.answer("Bunday anime topilmadi. Iltimos, boshqa nom kiriting yoki tekshiring.", reply_markup=back_button_btn())
         return
     
-    # Agar faqat bitta anime topilsa, avtomatik davom etamiz
     if len(anime_data) == 1:
         anime = anime_data[0]
-        anime_id = anime[0]  # anime_id
-        anime_name = anime[3]  # anime nomi
+        anime_id = anime[0]  
+        anime_name = anime[3] 
         await state.update_data(anime_id=anime_id, anime_name=anime_name)
         
-        # Animenning seriyalarini olish
         series = get_anime_series_base(anime_id)
         if not series:
             await msg.answer(f"'{anime_name}' uchun seriyalar topilmadi.", reply_markup=back_button_btn())
             await state.finish()
             return
         
-        # Inline buttonlar bilan seriyalar ro‘yxatini yaratish
         series_buttons = InlineKeyboardMarkup(row_width=3)
         for serie in series:
             serie_num = serie[2]  # serie_num
@@ -137,28 +126,24 @@ async def select_anime_for_post(msg: types.Message, state: FSMContext):
         await msg.answer(f"'{anime_name}' animening qaysi qismini post qilamiz?", reply_markup=series_buttons)
         return
     
-    # Agar bir nechta anime topilsa, foydalanuvchiga tanlash imkonini beramiz
     anime_buttons = InlineKeyboardMarkup(row_width=1)
     for anime in anime_data:
-        anime_id = anime[0]  # anime_id
-        anime_name = anime[3]  # anime nomi
+        anime_id = anime[0] 
+        anime_name = anime[3]  
         anime_buttons.add(InlineKeyboardButton(text=anime_name, callback_data=f"anime_{anime_id}"))
     anime_buttons.add(InlineKeyboardButton(text="🔙Ortga", callback_data="back_to_search"))
 
     await Posting.select_anime.set()
     await msg.answer("Bir nechta anime topildi. Iltimos, kerakli animeni tanlang:", reply_markup=anime_buttons)
 
-# Anime tanlash uchun callback handler
 @dp.callback_query_handler(state=Posting.select_anime, regexp="anime_|back_to_search")
 async def process_anime_selection(call: types.CallbackQuery, state: FSMContext):
     if call.data == "back_to_search":
         await call.message.edit_text("Anime nomini kiriting:", reply_markup=back_button_btn())
         return
     
-    # Tanlangan anime_id ni olish
     anime_id = int(call.data.split("_")[1])
     
-    # Animenni bazadan qayta olish
     anime_data = get_anime_base(anime_id)
     if not anime_data:
         await call.message.edit_text("Anime ma'lumotlari topilmadi! 😕", reply_markup=back_button_btn())
@@ -176,7 +161,6 @@ async def process_anime_selection(call: types.CallbackQuery, state: FSMContext):
         await state.finish()
         return
     
-    # Inline buttonlar bilan seriyalar ro‘yxatini yaratish
     series_buttons = InlineKeyboardMarkup(row_width=3)
     for serie in series:
         serie_num = serie[2]  # serie_num
@@ -185,7 +169,6 @@ async def process_anime_selection(call: types.CallbackQuery, state: FSMContext):
 
     await Posting.select_series.set()
     await call.message.edit_text(f"'{anime_name}' animening qaysi qismini post qilamiz?", reply_markup=series_buttons)
-# Seriya tanlash
 @dp.callback_query_handler(state=Posting.select_series)
 async def select_series_for_post(call: types.CallbackQuery, state: FSMContext):
     if call.data == "back_to_anime":
@@ -215,45 +198,6 @@ async def select_series_for_post(call: types.CallbackQuery, state: FSMContext):
     user_data = await state.get_data()
     await call.message.edit_text(f"'{user_data['anime_name']}' animening {serie_num}-qismini qaysi kanalga post qilamiz?", reply_markup=channel_buttons)
 
-# # Kanal tanlash
-# def format_post_text(anime_id, serie_id, serie_num, selected_channel):
-#     # Anime ma'lumotlarini olish
-#     anime_data = get_anime_base(anime_id)
-#     if not anime_data:
-#         return None, "Anime ma'lumotlari topilmadi."
-    
-#     anime = anime_data[0]
-#     anime_name = anime[3]  # name
-#     genre = anime[5]       # genre
-#     about = anime[4]       # about (qisqartiriladi)
-    
-#     # Seriya ma'lumotlarini olish
-#     series = get_anime_series_base(anime_id)
-#     quality = None
-#     for serie in series:
-#         if serie[1] == serie_id:  # serie_id
-#             quality = serie[3]    # quality
-#             break
-    
-#     # About matnini qisqartirish (agar uzun bo‘lsa)
-#     about = (about[:100] + "...") if len(about) > 100 else about
-    
-#     # Post matnini formatlash
-#     post_text = f"""
-# 🎬 *{anime_name}* - {serie_num}-qism
-# 🌟 *Janr*: {genre}
-# 📜 *Tavsif*: {about}
-# {'📽 *Sifat*: ' + quality if quality else ''}
-
-# 📺 *Kanal*: {selected_channel[1]}
-# 🔗 {selected_channel[2]}
-# """
-#     return post_text, None
-
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -266,7 +210,6 @@ def back_button_inline():
 
 @dp.callback_query_handler(state=Posting.select_channel)
 async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
-    # Orqaga qaytish (seriyalarni qayta ko‘rsatish)
     if call.data == "back_to_series":
         user_data = await state.get_data()
         anime_id = user_data.get("anime_id")
@@ -300,15 +243,11 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
     # Anime va seriya ma'lumotlarini olish
     user_data = await state.get_data()
     anime_id = user_data.get("anime_id")
-    # print(anime_id)
     anime_name = user_data.get("anime_name")
     serie_num = user_data.get("serie_num")
     anime_data = get_anime_base(anime_id)
     anime_id=get_seria_id(anime_id,serie_num)
     
-    # Anime ma'lumotlarini bazadan olish
-    
-    # print(anime_data)
     if not anime_data:
         await call.message.edit_text("Anime ma'lumotlari topilmadi! 😕", reply_markup=back_button_inline())
         await state.finish()
@@ -343,9 +282,7 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
     else:
         lang = anime_lang
     
-    # Postni tayyorlash (kanal nomisiz va linksiz, chotki)
     post_text = f"📥  <i>{anime_name}</i> - {serie_num}-qism 🔥 @AniDuble"
-    # Postni kanalga yuborish (inline knopka bilan)
     try:
         await call.bot.send_message(
             chat_id=selected_channel[2],
@@ -375,17 +312,11 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
     
     await state.finish()
 
-# @dp.message_handler(lambda msg: msg.text == "🔙Ortga", state="*")
-# async def back_to_start(msg: types.Message, state: FSMContext):
-#     await state.finish()
-#     await msg.answer("Bosh menyuga qaytildi.", reply_markup=admin_button_btn())
-
-
 @dp.message_handler(commands="admin",state="*")
 async def start(msg:types.Message ,state : FSMContext):
 
     if str(msg.chat.id)[0] == "-":
-          pass
+        pass
     else:
         user_id = msg.from_user.id
         user = get_user_base(user_id)
@@ -437,7 +368,6 @@ async def start(msg:types.Message ,state : FSMContext):
         if not channels:
             await msg.answer("Hozircha hech qanday kanal qo'shilmagan.")
             return
-        # Har bir kanalni chiroyli qilib formatlaymiz
         text = "📢 <b>Kanallar ro'yxati:</b>\n\n"
         for ch in channels:
             text += (
@@ -494,6 +424,7 @@ async def start(msg:types.Message ,state : FSMContext):
                 await msg.answer("🔒<b>Sponsorlikdan chiqarilishi</b> kerak bo'lgan <b>Kanalni tanlang</b> yoki ➕ <b>orqali yana qo'shing</b> ",reply_markup=sponsor_list_clbtn(sponsor))
         else:
             await msg.answer("😕<b>Bu faqat Adminlar uchun</b>")
+
     elif text == "👔Staff qo'shish":
         user = get_user_is_admin_base(msg.from_user.id)[0][0]
         if user == True: 
@@ -1437,7 +1368,7 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
             await state.finish()
             await Edit_serie.upload_new.set()
             await call.message.answer(f"❗️<b><i>{anime_name}</i> animesining <i>{serie_num}-seriyasi</i> uchun boshqa seriya yuboring !</b>",reply_markup=back_button_btn())
-           
+        
             async with state.proxy() as data:
                 data["serie"] = serie_id
                 data["name"] = anime_name
@@ -2055,7 +1986,7 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
         await call.message.delete()
         await Add_serie.finish_anime.set()
         await call.message.answer("⁉️<b>Siz ushbu animeni tugatishni tasdiqlayszmi ?</b>",reply_markup=are_you_sure_clbtn(content_id))
-      
+    
     elif command == "back":
         await call.message.delete()
         await Admin.menu.set()
@@ -2272,7 +2203,7 @@ async def start(msg:types.Message ,state : FSMContext):
                 
                 await msg.answer(f"""
 ✅Foydalanuvchi topildi :
-                                 
+                                
 🆔 : {user[0][0]}
 👤Username : {user[0][1]}
 ---------------
@@ -2323,68 +2254,68 @@ async def start(msg:types.Message ,state : FSMContext):
     
 @dp.callback_query_handler(text_contains = "sure",state=Admin.sure)
 async def qosh(call: types.CallbackQuery,state : FSMContext):
-    
-    data = await state.get_data()
-    command = data.get("command")
-    
-    sure = call.data.split(",")[1]
-    
-    admin_chat_id = call.from_user.id
-    
-    if command == "send_message_all":
         
-        if sure == "yeah":
-            await call.message.delete()
+        data = await state.get_data()
+        command = data.get("command")
+        
+        sure = call.data.split(",")[1]
+        
+        admin_chat_id = call.from_user.id
+        
+        if command == "send_message_all":
             
-            users_list = get_all_user_base()
-            message_id = data.get("msg")
-            
-            await Admin.menu.set()
-            await call.message.answer("✅<b>Yuborilmoqda . . .</b>",reply_markup=admin_button_btn())
-            
-            sended_users_count = 0
-            
-            for user in users_list:
-                user_id = user[0]
+            if sure == "yeah":
+                await call.message.delete()
+                
+                users_list = get_all_user_base()
+                message_id = data.get("msg")
+                
+                await Admin.menu.set()
+                await call.message.answer("✅<b>Yuborilmoqda . . .</b>",reply_markup=admin_button_btn())
+                
+                sended_users_count = 0
+                
+                for user in users_list:
+                    user_id = user[0]
+                    
+                    try:
+                        await dp.bot.forward_message(chat_id=user_id,from_chat_id=admin_chat_id,message_id=message_id)
+                        sended_users_count += 1
+                        await asyncio.sleep(3)
+                    except:
+                        try:
+                            await asyncio.sleep(1)
+                            await dp.bot.forward_message(chat_id=user_id,from_chat_id=admin_chat_id,message_id=message_id)
+                            sended_users_count += 1
+                            
+                        except:
+                            await asyncio.sleep(3)
+
+                await call.message.answer(f"<b>✅Xabar yuborib bo'lindi !!!\n\n{sended_users_count} ta foydalanuvchiga xabar yuborildi !</b>")
+                
+            elif sure == "nope":
+                await call.message.delete()
+                await Admin.menu.set()
+                await call.message.answer("❌<b>Bekor qilindi</b>",reply_markup=admin_button_btn())
+
+        if command == "send_message_to_one":
+            if sure == "yeah":
+                await call.message.delete()
+                
+                message_id = data.get("msg")
+                user_id = data.get("user_id")
                 
                 try:
                     await dp.bot.forward_message(chat_id=user_id,from_chat_id=admin_chat_id,message_id=message_id)
-                    sended_users_count += 1
-                    await asyncio.sleep(3)
+                    await state.finish()
+                    await Admin.menu.set()
+                    await call.message.answer("✅<b>Xabar yuborildi !</b>",reply_markup=admin_button_btn())
                 except:
-                    try:
-                        await asyncio.sleep(1)
-                        await dp.bot.forward_message(chat_id=user_id,from_chat_id=admin_chat_id,message_id=message_id)
-                        sended_users_count += 1
-                        
-                    except:
-                        await asyncio.sleep(3)
-
-            await call.message.answer(f"<b>✅Xabar yuborib bo'lindi !!!\n\n{sended_users_count} ta foydalanuvchiga xabar yuborildi !</b>")
-            
-        elif sure == "nope":
-            await call.message.delete()
-            await Admin.menu.set()
-            await call.message.answer("❌<b>Bekor qilindi</b>",reply_markup=admin_button_btn())
-
-    if command == "send_message_to_one":
-        if sure == "yeah":
-            await call.message.delete()
-            
-            message_id = data.get("msg")
-            user_id = data.get("user_id")
-            
-            try:
-                await dp.bot.forward_message(chat_id=user_id,from_chat_id=admin_chat_id,message_id=message_id)
-                await state.finish()
+                    await state.finish()
+                    await Admin.menu.set()
+                    await call.message.answer("<b>❌Yuborib bo'lmadi ! Foydalanuvchi botni blocklagan bo'lishi mumkin.</b>",reply_markup=admin_button_btn())
+                
+            elif sure == "nope":
+                await call.message.delete()
                 await Admin.menu.set()
-                await call.message.answer("✅<b>Xabar yuborildi !</b>",reply_markup=admin_button_btn())
-            except:
-                await state.finish()
-                await Admin.menu.set()
-                await call.message.answer("<b>❌Yuborib bo'lmadi ! Foydalanuvchi botni blocklagan bo'lishi mumkin.</b>",reply_markup=admin_button_btn())
-            
-        elif sure == "nope":
-            await call.message.delete()
-            await Admin.menu.set()
-            await call.message.answer("❌<b>Bekor qilindi</b>",reply_markup=admin_button_btn())
+                await call.message.answer("❌<b>Bekor qilindi</b>",reply_markup=admin_button_btn())

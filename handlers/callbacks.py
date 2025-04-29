@@ -304,8 +304,6 @@ def anime_series_clbtn(now_serie,series,page = 0):
 
     return cheker
 
-
-
 def back_button_clbtn(call):
     if not call:
         call = "back"
