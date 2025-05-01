@@ -22,7 +22,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 load_dotenv()
 
-TOKEN = os.getenv('TOKEN')
+TOKEN = os.getenv('BOT_TOKEN')
 ADMIN_IDS = [5306481482,6699160460]  
 
 bot = Bot(token=TOKEN)
@@ -109,7 +109,7 @@ async def check_inline_subscription(inline_query: types.InlineQuery):
 async def start_command(message: types.Message, state: FSMContext):
     add_user(message.from_user.id, message.from_user.username, message.from_user.first_name)
     inline_kb = InlineKeyboardMarkup(row_width=1).add(
-        InlineKeyboardButton("🔹️ Qidiruv berish 🔹️", switch_inline_query="")
+        InlineKeyboardButton("🔹️ Qidiruv berish 🔹️", switch_inline_query_current_chat="")
     )
     await message.answer_photo(
         "https://i.imgur.com/lgx2V81.jpeg",
