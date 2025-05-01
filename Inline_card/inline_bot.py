@@ -22,7 +22,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 load_dotenv()
 
-TOKEN = os.getenv('BOT_TOKEN')
+TOKEN = os.getenv('TOKEN')
 ADMIN_IDS = [5306481482,6699160460]  
 
 bot = Bot(token=TOKEN)
