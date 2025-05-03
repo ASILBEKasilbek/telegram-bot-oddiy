@@ -4,7 +4,6 @@ from .languages import *
 def choose_language_clbtn():
     cheker = InlineKeyboardMarkup()
     cheker.add(InlineKeyboardButton("🇺🇿 O'zbekcha",callback_data=f'select,uz'))
-    # cheker.add(InlineKeyboardButton("🇷🇺 Русский",callback_data=f'select,ru')) 
     return cheker
 def search_clbtn():
     cheker = InlineKeyboardMarkup()
@@ -48,8 +47,8 @@ def post_watching_clbtn(anime_id,anime_list):
 def create_channel_buttons(channels):
     keyboard = InlineKeyboardMarkup(row_width=1)
     for channel in channels:
-        channel_name = channel[1]  # Kanal nomi
-        channel_link = channel[2]  # Kanal havolasi
+        channel_name = channel[1]
+        channel_link = channel[2] 
         button = InlineKeyboardButton(channel_name, callback_data=f"select_channel,{channel_link}")
         keyboard.add(button)
     return keyboard

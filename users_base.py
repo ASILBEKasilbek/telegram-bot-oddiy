@@ -85,11 +85,32 @@ def creating_table():
     
     conn.execute("""CREATE VIRTUAL TABLE IF NOT EXISTS anime_fts USING fts5(
     name, 
-    genre, 
+    genre,
+    teg,
     content='anime', 
     content_rowid='anime_id'
 );
+
 """)
+    conn.executescript("""
+CREATE TRIGGER IF NOT EXISTS anime_ai AFTER INSERT ON anime BEGIN
+  INSERT INTO anime_fts(rowid, name, genre, teg)
+  VALUES (new.anime_id, new.name, new.genre, new.teg);
+END;
+
+CREATE TRIGGER IF NOT EXISTS anime_ad AFTER DELETE ON anime BEGIN
+  INSERT INTO anime_fts(anime_fts, rowid, name, genre, teg)
+  VALUES('delete', old.anime_id, old.name, old.genre, old.teg);
+END;
+
+CREATE TRIGGER IF NOT EXISTS anime_au AFTER UPDATE ON anime BEGIN
+  INSERT INTO anime_fts(anime_fts, rowid, name, genre, teg)
+  VALUES('delete', old.anime_id, old.name, old.genre, old.teg);
+  INSERT INTO anime_fts(rowid, name, genre, teg)
+  VALUES (new.anime_id, new.name, new.genre, new.teg);
+END;
+""")
+
 
     conn.execute("""INSERT INTO anime_fts(rowid, name, genre)
 SELECT anime_id, name, genre FROM anime;
@@ -611,6 +632,7 @@ def search_anime_base(prompt):
         [similar(prompt, word.strip()) for word in row["name"].lower().split()] +
         [similar(prompt, genre.strip()) for genre in str(row["genre"]).lower().split(",") if genre.strip()]
     ), reverse=True)
+    print(like_results)
 
     return similar_results
 
