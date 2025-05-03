@@ -82,39 +82,46 @@ def creating_table():
         date_added TEXT
     )
     """)
-    
-    conn.execute("""CREATE VIRTUAL TABLE IF NOT EXISTS anime_fts USING fts5(
-    name, 
-    genre,
-    teg,
-    content='anime', 
-    content_rowid='anime_id'
-);
+        # Eski FTS jadvalini o'chiramiz (agar mavjud bo'lsa)
+    conn.execute("DROP TABLE IF EXISTS anime_fts")
 
-""")
+    # Yangi FTS jadvalini yaratamiz
+    conn.execute("""
+    CREATE VIRTUAL TABLE anime_fts USING fts5(
+        name, 
+        genre,
+        teg,
+        content='anime', 
+        content_rowid='anime_id'
+    );
+    """)
+
+    # Triggerlar: FTS jadvalini anime jadvali bilan sinxronlashtirish
     conn.executescript("""
-CREATE TRIGGER IF NOT EXISTS anime_ai AFTER INSERT ON anime BEGIN
-  INSERT INTO anime_fts(rowid, name, genre, teg)
-  VALUES (new.anime_id, new.name, new.genre, new.teg);
-END;
+    CREATE TRIGGER IF NOT EXISTS anime_ai AFTER INSERT ON anime BEGIN
+        INSERT INTO anime_fts(rowid, name, genre, teg)
+        VALUES (new.anime_id, new.name, new.genre, new.teg);
+    END;
 
-CREATE TRIGGER IF NOT EXISTS anime_ad AFTER DELETE ON anime BEGIN
-  INSERT INTO anime_fts(anime_fts, rowid, name, genre, teg)
-  VALUES('delete', old.anime_id, old.name, old.genre, old.teg);
-END;
+    CREATE TRIGGER IF NOT EXISTS anime_ad AFTER DELETE ON anime BEGIN
+        INSERT INTO anime_fts(anime_fts, rowid, name, genre, teg)
+        VALUES('delete', old.anime_id, old.name, old.genre, old.teg);
+    END;
 
-CREATE TRIGGER IF NOT EXISTS anime_au AFTER UPDATE ON anime BEGIN
-  INSERT INTO anime_fts(anime_fts, rowid, name, genre, teg)
-  VALUES('delete', old.anime_id, old.name, old.genre, old.teg);
-  INSERT INTO anime_fts(rowid, name, genre, teg)
-  VALUES (new.anime_id, new.name, new.genre, new.teg);
-END;
-""")
+    CREATE TRIGGER IF NOT EXISTS anime_au AFTER UPDATE ON anime BEGIN
+        INSERT INTO anime_fts(anime_fts, rowid, name, genre, teg)
+        VALUES('delete', old.anime_id, old.name, old.genre, old.teg);
+        
+        INSERT INTO anime_fts(rowid, name, genre, teg)
+        VALUES (new.anime_id, new.name, new.genre, new.teg);
+    END;
+    """)
 
-
-    conn.execute("""INSERT INTO anime_fts(rowid, name, genre, teg)
-SELECT anime_id, name, genre, teg FROM anime;
-""")
+    # Mavjud anime jadvalidan ma'lumotlarni FTS jadvaliga ko'chirish
+    conn.execute("""
+    INSERT INTO anime_fts(rowid, name, genre, teg)
+    SELECT anime_id, name, genre, teg FROM anime;
+    """)
 
 
     conn.commit()
