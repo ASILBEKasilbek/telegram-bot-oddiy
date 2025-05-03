@@ -112,9 +112,10 @@ END;
 """)
 
 
-    conn.execute("""INSERT INTO anime_fts(rowid, name, genre)
-SELECT anime_id, name, genre FROM anime;
+    conn.execute("""INSERT INTO anime_fts(rowid, name, genre, teg)
+SELECT anime_id, name, genre, teg FROM anime;
 """)
+
 
     conn.commit()
     
