@@ -1,6 +1,7 @@
+from config import REKLAMA,ADMIN,BOT_NAME
 def user_button(lang):
     if lang == "uz":
-        buttons = ["🔍Anime Qidirish","📚Qo'llanma","💸Reklama va Homiylik","⚡️AniPass","Animelar ro'yhati 📓","🧧 Ongoing animelar","Tasodifiy anime"]
+        buttons = ["🔍Anime Qidirish","📚Qo'llanma","💸Reklama va Homiylik","⚡️AniPass","📓 Animelar ro'yhati","🧧 Ongoing animelar","🤝 Hamkorlik dasturi"]
     elif lang == "ru":
         buttons = []
         
@@ -119,16 +120,27 @@ def you_watch_this_now_message(lang):
 def about_bot_message(lang,user_id):
     if lang == "uz":
         text = f"""
-📚<b>AniDuble botini ishlatish bo'yicha qo'llanma : </b>
--
-🔍<b>Anime Qidirish</b> - Botda mavjud bo'lgan animelarni qidirish uchun ishlatiladi. 
-💸<b>Reklama va Homiylik</b> - bot adminlari bilan reklama yoki homiylik yuzasidan aloqaga chiqish.
-🧧<b>Ongoing animelar</b> - Yangi chiqayotgan animelar ro'yhati .
-⚡️<b>AniPass</b> - Botdan erkin foydalana olish imkonyatini beradi  .
--
-🧑‍💻<b>Admin</b> - @Aniduble_admin
-👨‍🔧<b>Dasturchi</b> - @dasturch1_asilbek
--
+<b>⋆⭒˚｡⋆༶ Botini ishlatish bo'yicha qo'llanma ⋆༶｡˚⭒⋆</b>
+<b>
+🔍 Anime Qidirish  </b>
+Botda mavjud bo'lgan animelarni qidirish uchun ishlatiladi.
+<b>💸 Reklama va Homiylik  </b>
+Bot adminlari bilan reklama yoki homiylik yuzasidan aloqaga chiqish.
+<b>🧧 Ongoing animelar  </b>
+Yangi chiqayotgan animelar ro'yhati.
+<b>
+⚡️ AniPass  </b>
+AniPass foydalanuvchilari uchun maxsus imkoniyatlar:  
+  ▪ Janrlar orqali qidirish  
+  ▪ Rasm orqali qidirish  
+  ▪ So'nggi yuklanganlar va eng ko'p ko'rilganlar  
+  ▪ Bot 2x tez ishlash imkoniyati  
+  ▪ Majburiy obuna talab qilmaydi  
+  ▪ Anime tavsiya funksiyasi
+
+🧑‍💻<b>Admin</b> - {ADMIN}
+👨‍🔧<b>Dasturchi </b>: @dasturch1_asilbek
+
 <b>🆔Botdagi ID ingiz :</b> <code>{user_id}</code>
 """
     
@@ -292,7 +304,7 @@ def send_your_age_message(lang):
 
 def start_message(lang):
     if lang == "uz":
-        text = "👋<b>AniDuble</b> botiga xush kelibsiz"
+        text = f"👋<b>{BOT_NAME}</b> botiga xush kelibsiz"
     
     elif lang == "ru":
         text = "👋Добро пожаловать в бот <b>AniDUble</b>"
@@ -317,7 +329,7 @@ Reklamalar bu ushbu bot uchun va asosiy kanalimiz uchun bo'ladi 📌
 
 Yani sizni kanalingiz bo'lsa uni aktivini ko'tarishning eng yaxshi yo'li 📊 
 
-Batafsil: @aniduble_rek</i>
+Batafsil: {REKLAMA}</i>
 """
     
     elif lang == "ru":
@@ -328,7 +340,7 @@ Reklamalar bu ushbu bot uchun va asosiy kanalimiz uchun bo'ladi 📌
 
 Yani sizni kanalingiz bo'lsa uni aktivini ko'tarishning eng yaxshi yo'li 📊 
 
-Batafsil: @aniduble_rek</i>
+Batafsil: {REKLAMA}</i>
 """
 
     return text

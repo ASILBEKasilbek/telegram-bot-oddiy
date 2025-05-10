@@ -1,9 +1,15 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from .languages import *
-
+from config import ANIDUBLE
 def choose_language_clbtn():
     cheker = InlineKeyboardMarkup()
     cheker.add(InlineKeyboardButton("🇺🇿 O'zbekcha",callback_data=f'select,uz'))
+    return cheker
+def hamkor_btn():
+    cheker = InlineKeyboardMarkup()
+    cheker.add(InlineKeyboardButton("Bot qo'shish",callback_data=f'hamkor_qoshish'),InlineKeyboardButton("Bot o'chirish",callback_data=f'hamkor_remove'))
+    cheker.add(InlineKeyboardButton("Botlar ro'yxati",callback_data=f'hamkor_list'))
+    cheker.add(InlineKeyboardButton("🔙Chiqish",callback_data=f'qaytish'))
     return cheker
 def search_clbtn():
     cheker = InlineKeyboardMarkup()
@@ -23,6 +29,7 @@ def vip_buying_clbtn():
 def which_vip_clbtn():
     cheker = InlineKeyboardMarkup()
     cheker.add(InlineKeyboardButton("⚡️AniPass",callback_data=f'which,vip'))
+    cheker.add(InlineKeyboardButton("🔙Chiqish",callback_data=f'back'))
     return cheker
 
 def vip_channel_clbtn():
@@ -33,14 +40,14 @@ def vip_channel_clbtn():
 
 def post_watching_clbtn(anime_id,anime_list):
     cheker = InlineKeyboardMarkup(row_width=2)
-    a='ANIDUBLE_RASMIY_BOT'
+    # a='ANIDUBLE_RASMIY_BOT'
     if len(anime_list.split(",")) > 1:
         num = 0
         for i in anime_list.split(","):
             num += 1
-            cheker.insert(InlineKeyboardButton(f"⚡️{num} -Fasl⚡️",url=f"https://t.me/{a}?start={i}"))
+            cheker.insert(InlineKeyboardButton(f"⚡️{num} -Fasl⚡️",url=f"https://t.me/{ANIDUBLE}?start={i}"))
     else:
-        cheker.add(InlineKeyboardButton(f"✨Tomosha qilish✨",url=f"https://t.me/{a}?start={anime_id}"))
+        cheker.add(InlineKeyboardButton(f"✨Tomosha qilish✨",url=f"https://t.me/{ANIDUBLE}?start={anime_id}"))
         
     return cheker
 
@@ -112,7 +119,6 @@ def anime_language_clbtn():
     
     cheker = InlineKeyboardMarkup()
     cheker.add(InlineKeyboardButton("🇺🇿O'zbekcha",callback_data=f'lang,uz'))
-    # cheker.add(InlineKeyboardButton("🇷🇺Ruscha",callback_data=f'lang,ru'))
     cheker.add(InlineKeyboardButton("🔙Ortga",callback_data=f'lang,back'))
         
     return cheker
@@ -121,7 +127,6 @@ def type_content_clbtn():
     
     cheker = InlineKeyboardMarkup()
     cheker.add(InlineKeyboardButton("✨Anime",callback_data=f'type,anime'))
-    # cheker.add(InlineKeyboardButton("🇷🇺Ruscha",callback_data=f'lang,ru'))
     cheker.add(InlineKeyboardButton("🎥Kino",callback_data=f'type,film'))
     cheker.add(InlineKeyboardButton("🔙Ortga",callback_data=f'type,back'))
         
@@ -320,8 +325,8 @@ def serie_posting_action_clbtn():
 
 def serie_post_link_clbtn(anime_id):
     cheker = InlineKeyboardMarkup()
-    a='demo23454_bot';a1='ANIDUBLE_RASMIY_BOT'
-    cheker.add(InlineKeyboardButton("✨Tomosha qilish✨",url=f"https://t.me/{a1}?start={anime_id}serie"))
+    # a='demo23454_bot';a1='ANIDUBLE_RASMIY_BOT'
+    cheker.add(InlineKeyboardButton("✨Tomosha qilish✨",url=f"https://t.me/{ANIDUBLE}?start={anime_id}serie"))
         
     return cheker
 

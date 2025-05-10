@@ -1,4 +1,4 @@
-from aiogram import types
+from aiogram import types,Bot
 from users_base import *
 from dispatcher import dp
 from aiogram.dispatcher import FSMContext
@@ -26,303 +26,482 @@ try:
 except ImportError:
     process = None
     fuzz = None
-
+from config import ANIDUBLE,BOT_NAME,KARTA_RAQAM, KARTA_NOMI
 load_dotenv()
-
+from .admin_actions import get_mandatory_channels
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 
+
+
+from aiogram import types, Bot
+
+
+
+
+from users_base import get_user_base, add_user_base, update_statistics_user_base, update_user_vip_base
+from dispatcher import dp
+from aiogram.dispatcher import FSMContext
+from .buttons import *
+from .languages import *
+from .callbacks import *
+from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+import asyncio
+from datetime import *
+import shutil
+from .searching_by_photo import *
+import os
+from aiogram.types import InputFile
+from .search_photo import handle_photo_from_file
+from dotenv import load_dotenv
+from dateutil.relativedelta import relativedelta
+import logging
+try:
+    from fuzzywuzzy import process, fuzz
+except ImportError:
+    process = None
+    fuzz = None
+from config import ANIDUBLE, BOT_NAME, KARTA_RAQAM, KARTA_NOMI
+from .admin_actions import get_mandatory_channels, get_sponsor
+
+anime_treller_chat = -1001990975355
+anime_series_chat = -1002076256295
+vip_buying_chat = -1002099276344
+
+load_dotenv()
+BOT_TOKEN = os.getenv('BOT_TOKEN')
+
+# Logging sozlamalari
+logging.basicConfig(level=logging.INFO, filename='bot_user.log')
+
 class User(StatesGroup):
-     language = State()
-     menu = State()
+    language = State()
+    menu = State()
+    searching = State()
+    searching_film = State()
+    anime_menu = State()
+    film_menu = State()
+    watching = State()
+    watching_film = State()
+    films = State()
+    genre_input = State()
+    buying_vip = State()
+    buying_lux = State()
+    search_by_photo = State()
+    search_state = State()
+    tasodifiy = State()
 
-     searching = State()
-     searching_film = State()
-
-     anime_menu = State()
-     film_menu = State()
-     watching = State()
-     watching_film = State()
-
-     films = State()
-     genre_input = State()
-     buying_vip = State()
-     buying_lux= State()
-
-     search_by_photo = State()
-     search_state= State()
-     tasodifiy= State()
-
+# VIP foydalanuvchi tekshiruvi
 async def check_premium_func(user_id):
-     user = get_user_base(user_id)  
-     if user and len(user) > 0 and len(user[0]) > 5:
-          vip = user[0][5]
-     else:
-          vip = "0"  
-     is_vip = "True"
-     if vip != "0":
-          expire_time = datetime.strptime(vip, "%Y-%m-%d")
-          now = datetime.now()
-          if expire_time < now:
-               is_vip = "False"
-               update_user_vip_base(user_id,"0")
-     if vip == 0 or vip == "0":
-          is_vip = "False"
-     else:
-          today = datetime.now().strftime("%Y-%m-%d")
-          today2 = datetime.strptime(today, "%Y-%m-%d")
-          users = update_user_vip_over_base(today)
+    user = get_user_base(user_id)
+    if not user or len(user) == 0 or len(user[0]) < 6:
+        logging.warning(f"No valid user data for user_id {user_id}")
+        return "False"
+    
+    vip = user[0][5] if user[0][5] is not None else "0"
+    is_vip = "False"
+    
+    if vip != "0":
+        try:
+            expire_time = datetime.strptime(vip, "%Y-%m-%d")
+            now = datetime.now()
+            if expire_time >= now:
+                is_vip = "True"
+            else:
+                update_user_vip_base(user_id, "0")
+                text = "<b>‼️Sizdagi ⚡️AniPass muddati o'z nihoyasiga yetdi!</b>"
+                try:
+                    a = await dp.bot.send_message(chat_id=user_id, text=text)
+                    await a.pin()
+                except Exception as e:
+                    logging.error(f"Error pinning VIP expiration message for user {user_id}: {e}")
+                try:
+                    await dp.bot.kick_chat_member(chat_id=-1002131546047, user_id=user_id)
+                except Exception as e:
+                    logging.error(f"Error kicking user {user_id} from VIP chat: {e}")
+        except ValueError:
+            logging.error(f"Invalid VIP date format for user {user_id}: {vip}")
+            update_user_vip_base(user_id, "0")
+    
+    return is_vip
 
-          if users:
-               for i in users:
-                    try:
-                         await dp.bot.kick_chat_member(chat_id=-1002131546047,user_id=i[0])
-                    except:
-                         pass
+# Majburiy kanallarni inline tugmalar sifatida ko‘rsatish
+async def display_mandatory_channels(msg: types.Message, lang: str, channels: list, edit=False):
+    markup = InlineKeyboardMarkup(row_width=1)
+    valid_channels = []
+    
+    for channel in channels:
+        channel_link = channel[1].strip() if channel[1] else None
+        channel_name = channel[2].strip() if channel[2] else "Unknown"
+        if channel_link and channel_link.startswith('@'):
+            channel_url = f"https://t.me/{channel_link.lstrip('@')}"
+            expire_info = f" (Muddat: {channel[4]})" if channel[4] else ""
+            markup.add(InlineKeyboardButton(f"{channel_name}{expire_info}", url=channel_url))
+            valid_channels.append(channel)
+    
+    if not valid_channels:
+        logging.warning("No valid channels to display")
+        await msg.answer("Hech qanday kanal topilmadi. Iltimos, administrator bilan bog‘laning.")
+        return False
+    
+    markup.add(InlineKeyboardButton("✅ Tekshirish", callback_data="check_subscription"))
+    text = you_should_subscribe_message(lang)
+    
+    try:
+        if edit:
+            try:
+                await msg.edit_text(text, reply_markup=markup, parse_mode="HTML")
+            except Exception as e:
+                if "Message is not modified" in str(e):
+                    logging.info(f"Message not modified for user {msg.from_user.id}, sending new message")
+                    await msg.delete()
+                    await msg.answer(text, reply_markup=markup, parse_mode="HTML")
+                else:
+                    raise e
+        else:
+            await msg.answer(text, reply_markup=markup, parse_mode="HTML")
+        logging.info(f"Displayed mandatory channels to user {msg.from_user.id}, edit={edit}")
+        return True
+    except Exception as e:
+        logging.error(f"Error displaying mandatory channels: {e}")
+        await msg.answer(text, reply_markup=markup, parse_mode="HTML")
+        return True
 
-          if is_vip == "True":
-               is_premium_user = datetime.strptime(vip, "%Y-%m-%d")
-          
-               if today2 >= is_premium_user:
-                    update_user_free_base(user_id)
-                    text = "<b>‼️Sizdagi ⚡️AniPass muddati o'z nihoyasiga yetdi !</b>"
-                    try:
-                         a = await dp.bot.send_message(chat_id=user_id,text=text)
-                         await a.pin()
-                    except:
-                         pass
-                    is_vip = "False"
-                    update_user_vip_base(user_id,"0")
+# Sponsor va majburiy kanallarni tekshirish funksiyasi
+async def sponsor_checking_func(msg: types.Message, lang: str):
+    sponsor = get_sponsor() or []
+    mandatory_channels = get_mandatory_channels() or []
+    is_sub = True
+    failed_channels = []
 
-               else:
-                    is_vip = "True"
-          
-     return is_vip
+    if not sponsor and not mandatory_channels:
+        logging.info(f"No sponsor or mandatory channels for user {msg.from_user.id}")
+        return is_sub
 
-@dp.message_handler(commands="start",state="*")
-async def start(msg:types.Message ,state : FSMContext):
+    for s in sponsor:
+        try:
+            chat_id = s[1].strip() if s[1] and s[1].startswith('@') else None
+            if not chat_id:
+                logging.error(f"Invalid sponsor channel link: {s[1]}")
+                failed_channels.append(s[1] or "Unknown")
+                continue
+            user = await dp.bot.get_chat_member(chat_id=chat_id, user_id=msg.from_user.id)
+            if user.status == "left":
+                is_sub = False
+                failed_channels.append(s[1])
+            await asyncio.sleep(0.5)  # API cheklovlaridan qochish
+        except Exception as e:
+            logging.error(f"Sponsor kanal tekshirishda xato: {s[0]}, link: {s[1]}, xato: {e}")
+            failed_channels.append(s[1] or "Unknown")
+            continue
 
-     if str(msg.chat.id)[0] == "-":
-          pass
-     else:
-          user_id = msg.from_user.id
-          user = get_user_base(user_id)
-          if not user:
-               
-               username = msg.from_user.username
-               
-               if username != None:
-                    user_name = f"@{msg.from_user.username}"
-               else:
-                    user_name = "None"
-                    
-               await User.language.set()
-               
-               async with state.proxy() as data:
-                    data["username"] = user_name
-                    
-               text = """
-Tilini tanlang :
-"""
-               await msg.answer(text=text,reply_markup=choose_language_clbtn())
-          else:
-               lang = user[0][2]
+    if is_sub:
+        for channel in mandatory_channels:
+            try:
+                chat_id = channel[1].strip() if channel[1] and channel[1].startswith('@') else None
+                if not chat_id:
+                    logging.error(f"Invalid mandatory channel link: {channel[1]}")
+                    failed_channels.append(channel[1] or "Unknown")
+                    continue
+                user = await dp.bot.get_chat_member(chat_id=chat_id, user_id=msg.from_user.id)
+                if user.status == "left":
+                    is_sub = False
+                    failed_channels.append(channel[1])
+                await asyncio.sleep(0.5)  # API cheklovlaridan qochish
+            except Exception as e:
+                logging.error(f"Majburiy kanal tekshirishda xato: {channel[0]}, link: {channel[1]}, xato: {e}")
+                failed_channels.append(channel[1] or "Unknown")
+                continue
 
-               is_vip = await check_premium_func(user_id)
-               async with state.proxy() as data:
-                    data["lang"] = lang
-                    data["vip"] = is_vip
+    if not is_sub:
+        combined_channels = mandatory_channels + [(s[0], s[1], s[1] or "Unknown", None, None, 0, None) for s in sponsor]
+        success = await display_mandatory_channels(msg, lang, combined_channels, edit=False)
+        if success:
+            logging.info(f"User {msg.from_user.id} not subscribed to channels: {', '.join(failed_channels)}")
+        else:
+            is_sub = True  # Agar kanallar ko‘rsatilmasa, tekshiruvni o‘tkazib yuboramiz
 
-               try:
-                    
-                    try:
-                         is_sub = await sponsor_cheking_func(msg,lang)
+    return is_sub
 
-                         if is_sub == True:
+# “Tekshirish” tugmasi uchun handler
+@dp.callback_query_handler(text="check_subscription", state="*")
+async def check_subscription_callback(callback: types.CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    lang = (await state.get_data()).get("lang", "uz")
+    sponsor = get_sponsor() or []
+    mandatory_channels = get_mandatory_channels() or []
+    is_sub = True
+    failed_channels = []
 
-                              start = msg.text.replace("/start ","")
-                              serie_post_id = int(start.split("serie")[0])
-                              str(start.split("serie")[1])
-                              anime = get_anime_base(serie_post_id)
+    for s in sponsor:
+        try:
+            chat_id = s[1].strip() if s[1] and s[1].startswith('@') else None
+            if not chat_id:
+                logging.error(f"Invalid sponsor channel link: {s[1]}")
+                failed_channels.append(s[1] or "Unknown")
+                continue
+            user = await dp.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
+            if user.status == "left":
+                is_sub = False
+                failed_channels.append(s[1])
+            await asyncio.sleep(0.5)  # API cheklovlaridan qochish
+        except Exception as e:
+            logging.error(f"Sponsor kanal tekshirishda xato: {s[0]}, link: {s[1]}, xato: {e}")
+            failed_channels.append(s[1] or "Unknown")
+            continue
 
-                              if anime:
-                                   a = await msg.answer(anime_found_message(lang),reply_markup=back_button_btn())
-                                   await a.delete()
+    if is_sub:
+        for channel in mandatory_channels:
+            try:
+                chat_id = channel[1].strip() if channel[1] and channel[1].startswith('@') else None
+                if not chat_id:
+                    logging.error(f"Invalid mandatory channel link: {channel[1]}")
+                    failed_channels.append(channel[1] or "Unknown")
+                    continue
+                user = await dp.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
+                if user.status == "left":
+                    is_sub = False
+                    failed_channels.append(channel[1])
+                await asyncio.sleep(0.5)  # API cheklovlaridan qochish
+            except Exception as e:
+                logging.error(f"Majburiy kanal tekshirishda xato: {channel[0]}, link: {channel[1]}, xato: {e}")
+                failed_channels.append(channel[1] or "Unknown")
+                continue
 
-                                   serie = get_series_base(serie_post_id)[-1]
-                                   print(serie)
-                                   serie_id = int(serie[1])
-                                   serie_num = int(serie[2])
-                                   serie_quality = serie[3]
-                                   which_anime = int(serie[0])
-                                   page = serie_num // 21
+    try:
+        if is_sub:
+            await state.finish()
+            await User.menu.set()
+            is_vip = await check_premium_func(user_id)
+            async with state.proxy() as data:
+                data["lang"] = lang
+                data["vip"] = is_vip
+            await callback.message.delete()  # Eski xabarni o‘chirish
+            await callback.message.answer(
+                main_menu_message(lang),
+                reply_markup=user_button_btn(lang, is_vip),
+                parse_mode="HTML"
+            )
+            await callback.answer("✅ Barcha kanallarga a’zo bo‘ldingiz!", show_alert=True)
+            logging.info(f"User {user_id} successfully subscribed to all channels")
+        else:
+            combined_channels = mandatory_channels + [(s[0], s[1], s[1] or "Unknown", None, None, 0, None) for s in sponsor]
+            success = await display_mandatory_channels(callback.message, lang, combined_channels, edit=True)
+            if success:
+                await callback.answer(
+                    f"Iltimos, quyidagi kanallarga a’zo bo‘ling: {', '.join(failed_channels)}",
+                    show_alert=True
+                )
+                logging.info(f"User {user_id} not subscribed to channels: {', '.join(failed_channels)}")
+    except Exception as e:
+        logging.error(f"Error in check_subscription_callback: {e}")
+        combined_channels = mandatory_channels + [(s[0], s[1], s[1] or "Unknown", None, None, 0, None) for s in sponsor]
+        success = await display_mandatory_channels(callback.message, lang, combined_channels, edit=False)
+        if success:
+            await callback.answer(
+                f"Iltimos, quyidagi kanallarga a’zo bo‘ling: {', '.join(failed_channels)}",
+                show_alert=True
+            )
 
-                                   next_states = True
+# Til tanlash handleri
+@dp.callback_query_handler(lambda c: c.data.startswith("select,"), state=User.language)
+async def qosh(callback: types.CallbackQuery, state: FSMContext):
+    lang = callback.data.split(",")[1]
+    user_id = callback.from_user.id
+    username = f"@{callback.from_user.username}" if callback.from_user.username else "None"
 
-                                   series = get_anime_series_base(which_anime)
+    async with state.proxy() as data:
+        data["lang"] = lang
 
-                                   is_vip_anime = anime[0][10]
+    is_vip = await check_premium_func(user_id)
 
-                                   if is_vip_anime == "vip":
-                                        if is_vip_user == "True":
-                                             next_states = True
-                                        else:
-                                             await state.finish()
-                                             await User.menu.set()
+    try:
+        add_user_base(user_id=user_id, username=username, lang=lang)
+        update_statistics_user_base()
+    except Exception as e:
+        logging.error(f"Error adding user {user_id} to database: {e}")
+        await callback.answer("Xato yuz berdi, iltimos qayta urinib ko‘ring!", show_alert=True)
+        return
 
-                                             async with state.proxy() as data:
-                                                  data["lang"] = lang
-                                                  data["vip"] = is_vip
+    is_sub = await sponsor_checking_func(callback.message, lang)
+    if not is_sub:
+        return
 
-                                             await msg.answer("‼️Ushbu animeni tomosha qilish uchun ⚡️AniPass sotib olishingiz kerak !",reply_markup=user_button_btn(lang))
-                                             next_states = False
+    await User.menu.set()
+    await callback.message.delete()
 
-                                   if is_vip_anime == "True":
-                                        protect = True
-                                   else:
-                                        protect = False     
-                                   
-                                   if next_states == True:
-                                        await User.watching.set()
-                                        
-                                        a = await dp.bot.forward_message(chat_id=user_id,message_id=serie_id,from_chat_id=anime_series_chat,protect_content=protect)
+    async with state.proxy() as data:
+        data["lang"] = lang
+        data["vip"] = is_vip
 
-                                        async with state.proxy() as data:
-                                             data["lang"] = lang
-                                             data["serie"] = a.message_id
+    await callback.message.answer(start_message(lang), reply_markup=user_button_btn(lang, is_vip))
+    await callback.answer(f"Til muvaffaqiyatli o‘zgartirildi: {lang}", show_alert=True)
+    logging.info(f"User {user_id} selected language {lang}")
 
-                                        await msg.answer(anime_serie_message(lang,serie_num,serie_quality),reply_markup=anime_series_clbtn(serie_num,series,page))
-                              
-                              elif serie_post_id:
-                                   a = await msg.answer(anime_found_message(lang),reply_markup=back_button_btn())
-                                   await a.delete()
+# Ortga qaytish tugmasi
+@dp.callback_query_handler(lambda c: c.data == "back", state="*")
+async def back_to_main_menu(callback_query: types.CallbackQuery, state: FSMContext):
+    user_id = callback_query.from_user.id
+    lang = (await state.get_data()).get("lang", "uz")
 
-                                   serie = get_series_base2(serie_post_id)
-                                   serie_id = int(serie[0][1])
-                                   serie_num = int(serie[0][2])
-                                   serie_quality = serie[0][3]
-                                   which_anime = int(serie[0][0])
-                                   page = serie_num // 21
-                                   next_states = True
+    is_sub = await sponsor_checking_func(callback_query.message, lang)
+    if not is_sub:
+        return
 
-                                   series = get_anime_series_base(which_anime)
+    await state.finish()
+    await User.menu.set()
+    is_vip = await check_premium_func(user_id)
+    async with state.proxy() as data:
+        data["lang"] = lang
+        data["vip"] = is_vip
 
-                                   is_vip_anime = "False"
-                                   if is_vip_anime == "vip":
-                                        if is_vip_user == "True":
-                                             next_states = True
-                                        else:
-                                             await state.finish()
-                                             await User.menu.set()
+    await callback_query.message.delete()
+    await callback_query.message.answer(
+        main_menu_message(lang),
+        reply_markup=user_button_btn(lang, is_vip),
+        parse_mode="HTML"
+    )
+    logging.info(f"User {user_id} returned to main menu")
 
-                                             async with state.proxy() as data:
-                                                  data["lang"] = lang
-                                                  data["vip"] = is_vip
+# Start komandasi
+@dp.message_handler(commands="start", state="*")
+async def start(msg: types.Message, state: FSMContext):
+    if str(msg.chat.id)[0] == "-":
+        return
 
-                                             await msg.answer("‼️Ushbu animeni tomosha qilish uchun ⚡️AniPass sotib olishingiz kerak !",reply_markup=user_button_btn(lang))
-                                             next_states = False
+    user_id = msg.from_user.id
+    user = get_user_base(user_id)
+    lang = user[0][2] if user and len(user) > 0 and len(user[0]) > 2 else "uz"
 
-                                   if is_vip_anime == "True":
-                                        protect = True
-                                   else:
-                                        protect = False 
-                                   
-                                   if next_states == True:
-                                        await User.watching.set()
-                                        
-                                        a = await dp.bot.forward_message(chat_id=user_id,message_id=serie_id,from_chat_id=anime_series_chat,protect_content=protect)
+    is_sub = await sponsor_checking_func(msg, lang)
+    if not is_sub:
+        return
 
-                                        async with state.proxy() as data:
-                                             data["lang"] = lang
-                                             data["serie"] = a.message_id
+    if not user:
+        username = msg.from_user.username
+        user_name = f"@{username}" if username else "None"
+        await User.language.set()
+        async with state.proxy() as data:
+            data["username"] = user_name
+        text = "Tilni tanlang:"
+        await msg.answer(text=text, reply_markup=choose_language_clbtn())
+        logging.info(f"New user {user_id} prompted to choose language")
+    else:
+        is_vip = await check_premium_func(user_id)
+        async with state.proxy() as data:
+            data["lang"] = lang
+            data["vip"] = is_vip
 
-                                        await msg.answer(anime_serie_message(lang,serie_num,serie_quality),reply_markup=anime_series_clbtn(serie_num,series,page))
+        try:
+            start = msg.text.replace("/start ", "")
+            if "serie" in start:
+                serie_post_id = int(start.split("serie")[0])
+                anime = get_anime_base(serie_post_id)
+                if anime:
+                    a = await msg.answer(anime_found_message(lang), reply_markup=back_button_btn())
+                    await a.delete()
+                    serie = get_series_base(serie_post_id)[-1]
+                    serie_id = int(serie[1])
+                    serie_num = int(serie[2])
+                    serie_quality = serie[3]
+                    which_anime = int(serie[0])
+                    page = serie_num // 21
+                    series = get_anime_series_base(which_anime)
+                    is_vip_anime = anime[0][10]
+                    next_states = True
 
-                              else:
-                                   username = msg.from_user.username
-               
-                                   if username != None:
-                                        user_name = f"@{msg.from_user.username}"
-                                   else:
-                                        user_name = "None"
-                                   await state.finish()
-                                   await User.menu.set()
-                                   try:
-                                        update_user_username_base(msg.from_user.id,username)
-                                   except:
-                                        pass
-                                   async with state.proxy() as data:
-                                        data["lang"] = lang
-                                        
-                                   await msg.answer("🔥",reply_markup=user_button_btn(lang))
+                    if is_vip_anime == "vip" and is_vip == "False":
+                        await state.finish()
+                        await User.menu.set()
+                        async with state.proxy() as data:
+                            data["lang"] = lang
+                            data["vip"] = is_vip
+                        await msg.answer("‼️Ushbu animeni tomosha qilish uchun ⚡️AniPass sotib olishingiz kerak!", reply_markup=user_button_btn(lang))
+                        return
 
-                    
-                    except:
-
-                         content_id = msg.text.replace("/start ","")
-                         
-                         is_sub = await sponsor_cheking_func(msg,lang)
-
-                         content_id = int(content_id)
-                         if is_sub == True:
-                              anime = get_anime_base(content_id)
-                              if anime:
-                                   await msg.answer(anime_found_message(lang))
-                                             
-                                   have_serie = False
-                                   if anime[0][8] > 0:
-                                        have_serie = True
-
-                                   trailer_id = anime[0][2]
-                                   anime_id = anime[0][0]
-                                   is_vip = anime[0][10]
-
-                                   await msg.delete()
-
-                                   is_vip_user = await check_premium_func(user_id)
-
-                                   trailer = await dp.bot.forward_message(message_id=trailer_id,chat_id=user_id,from_chat_id=anime_treller_chat)
-                                   async with state.proxy() as data:
-                                        data["trailer"] = trailer.message_id
-                                        data["have_serie"] = have_serie
-                                        data["lang"] = lang
-                                        data["vip"] = is_vip_user
-
-                                   await User.anime_menu.set()
-                                   await msg.answer(anime_menu_message(lang,anime),reply_markup=anime_menu_clbtn(lang,anime_id,False,have_serie,is_vip))
-                              else:
-                                   username = msg.from_user.username
-               
-                                   if username != None:
-                                        user_name = f"@{msg.from_user.username}"
-                                   else:
-                                        user_name = "None"
-                                   await state.finish()
-                                   await User.menu.set()
-                                   try:
-                                        update_user_username_base(msg.from_user.id,username)
-                                   except:
-                                        pass
-                                   async with state.proxy() as data:
-                                        data["lang"] = lang
-                                        
-                                   await msg.answer("🔥",reply_markup=user_button_btn(lang))
-               except:
-                    username = msg.from_user.username
-               
-                    if username != None:
-                         user_name = f"@{msg.from_user.username}"
-                    else:
-                         user_name = "None"
+                    protect = is_vip_anime == "True"
+                    await User.watching.set()
+                    a = await dp.bot.forward_message(chat_id=user_id, message_id=serie_id, from_chat_id=anime_series_chat, protect_content=protect)
+                    async with state.proxy() as data:
+                        data["lang"] = lang
+                        data["serie"] = a.message_id
+                    await msg.answer(anime_serie_message(lang, serie_num, serie_quality), reply_markup=anime_series_clbtn(serie_num, series, page))
+                else:
                     await state.finish()
                     await User.menu.set()
-                    try:
-                         update_user_username_base(msg.from_user.id,username)
-                    except:
-                         pass
                     async with state.proxy() as data:
-                         data["lang"] = lang
-                         
-                    await msg.answer("🔥",reply_markup=user_button_btn(lang,is_vip))
+                        data["lang"] = lang
+                    caption_text = f"""<b>
+✨ Salom! {msg.from_user.username} Men — {BOT_NAME}!
+🎌 O'zbek tilida dublyaj qilingan animelar olamiga hush kelibsiz!
+...
+</b>"""
+                    with open("media/aniduble.jpg", "rb") as photo:
+                        await msg.answer_photo(
+                            photo=photo,
+                            caption=caption_text,
+                            reply_markup=user_button_btn(lang, is_vip),
+                            parse_mode="HTML"
+                        )
+            else:
+                await state.finish()
+                await User.menu.set()
+                async with state.proxy() as data:
+                    data["lang"] = lang
+                caption_text = f"""<b>
+✨ Salom! {msg.from_user.username} Men — {BOT_NAME}!
+🎌 O'zbek tilida dublyaj qilingan animelar olamiga hush kelibsiz!
+...
+</b>"""
+                with open("media/aniduble.jpg", "rb") as photo:
+                    await msg.answer_photo(
+                        photo=photo,
+                        caption=caption_text,
+                        reply_markup=user_button_btn(lang, is_vip),
+                        parse_mode="HTML"
+                    )
+        except Exception as e:
+            logging.error(f"Start command error for user {user_id}: {e}")
+            await state.finish()
+            await User.menu.set()
+            async with state.proxy() as data:
+                data["lang"] = lang
+            caption_text = f"""<b>
+✨ Salom! {msg.from_user.username} Men — {BOT_NAME}!
+🎌 O'zbek tilida dublyaj qilingan animelar olamiga hush kelibsiz!
+...
+</b>"""
+            with open("media/aniduble.jpg", "rb") as photo:
+                await msg.answer_photo(
+                    photo=photo,
+                    caption=caption_text,
+                    reply_markup=user_button_btn(lang, is_vip),
+                    parse_mode="HTML"
+                )
+
+
+
+
+
+
+
+
+
+
+from aiogram.dispatcher.filters import Command
+
+@dp.message_handler(Command("help"))
+async def send_help(message: types.Message):
+     lang = "uz" 
+     user_id = message.from_user.id
+
+
+     await message.answer(about_bot_message(lang,message.from_user.id))
+
+
+
+
+
 
 @dp.callback_query_handler(text_contains = "select",state=User.language)
 async def qosh(call: types.CallbackQuery,state : FSMContext):
@@ -347,6 +526,71 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
           data["lang"] = lang
      
      await call.message.answer(start_message(lang),reply_markup=user_button_btn(lang,is_vip))
+
+
+
+
+
+async def check_premium_func(user_id):
+     user = get_user_base(user_id)
+     vip = user[0][5]
+     lux = user[0][6]
+
+     is_vip = "True"
+     is_lux = "True"
+     
+     if vip == 0 or vip == "0":
+          is_vip = "False"
+
+     if lux == 0 or lux == "0":
+          is_lux = "False"
+     else:
+          today = datetime.now().strftime("%Y-%m-%d")
+          today2 = datetime.strptime(today, "%Y-%m-%d")
+          users = update_user_vip_over_base(today)
+
+          if users:
+               for i in users:
+                    try:
+                         await dp.bot.kick_chat_member(chat_id=-1002131546047,user_id=i[0])
+                    except:
+                         pass
+
+          if is_vip == "True":
+               is_premium_user = datetime.strptime(vip, "%Y-%m-%d")
+          
+               if today2 >= is_premium_user:
+                    update_user_free_base(user_id)
+                    text = "<b>‼️Sizdagi ⚡️AniPass muddati o'z nihoyasiga yetdi !</b>"
+                    try:
+                         a = await dp.bot.send_message(chat_id=user_id,text=text)
+                         await a.pin()
+                    except:
+                         pass
+                    is_vip = "False"
+               else:
+                    is_vip = "True"
+          
+          if is_lux == "True":
+               is_lux_user = datetime.strptime(lux, "%Y-%m-%d")
+
+               if today2 >= is_lux_user:
+
+                    update_user_free_lux_base(user_id)
+
+                    try:
+                         await dp.bot.kick_chat_member(chat_id=-1002131546047,user_id=user_id)
+                    except:
+                         pass
+
+                    text = "<b>‼️Sizdagi 💎Lux obuna muddati o'z nihoyasiga yetdi !</b>"
+                    try:
+                         a = await dp.bot.send_message(chat_id=user_id,text=text)
+                         await a.pin()
+                    except:
+                         pass
+
+     return is_vip
 
 async def sponsor_cheking_func(msg,lang):
      
@@ -391,6 +635,74 @@ async def sponsor_cheking_func(msg,lang):
 
      return is_sub
 
+
+
+
+
+
+async def check_premium_func(user_id):
+     user = get_user_base(user_id)
+     print(user)
+     vip = user[0][5]
+
+     lux = user[0][6]
+
+     is_vip = "True"
+     is_lux = "True"
+     
+     if vip == 0 or vip == "0":
+          is_vip = "False"
+
+     if lux == 0 or lux == "0":
+          is_lux = "False"
+     else:
+          today = datetime.now().strftime("%Y-%m-%d")
+          today2 = datetime.strptime(today, "%Y-%m-%d")
+          users = update_user_vip_over_base(today)
+
+          if users:
+               for i in users:
+                    try:
+                         await dp.bot.kick_chat_member(chat_id=-1002131546047,user_id=i[0])
+                    except:
+                         pass
+
+          if is_vip == "True":
+               is_premium_user = datetime.strptime(vip, "%Y-%m-%d")
+          
+               if today2 >= is_premium_user:
+                    update_user_free_base(user_id)
+                    text = "<b>‼️Sizdagi ⚡️AniPass muddati o'z nihoyasiga yetdi !</b>"
+                    try:
+                         a = await dp.bot.send_message(chat_id=user_id,text=text)
+                         await a.pin()
+                    except:
+                         pass
+                    is_vip = "False"
+               else:
+                    is_vip = "True"
+          
+          if is_lux == "True":
+               is_lux_user = datetime.strptime(lux, "%Y-%m-%d")
+
+               if today2 >= is_lux_user:
+
+                    update_user_free_lux_base(user_id)
+
+                    try:
+                         await dp.bot.kick_chat_member(chat_id=-1002131546047,user_id=user_id)
+                    except:
+                         pass
+
+                    text = "<b>‼️Sizdagi 💎Lux obuna muddati o'z nihoyasiga yetdi !</b>"
+                    try:
+                         a = await dp.bot.send_message(chat_id=user_id,text=text)
+                         await a.pin()
+                    except:
+                         pass
+
+     return is_vip
+
 @dp.message_handler(content_types=["text"],state=User.menu)
 async def start(msg:types.Message ,state : FSMContext):
 
@@ -409,10 +721,7 @@ async def start(msg:types.Message ,state : FSMContext):
      
      text = msg.text
 
-     if text == "📚Qo'llanma" or text == "📚Qo'llanma":
-          await msg.answer(about_bot_message(lang,msg.from_user.id))
-
-     elif text == "💸Reklama va Homiylik" or text == "💸Reklama va Homiylik":
+     if text == "💸Reklama va Homiylik" or text == "💸Reklama va Homiylik":
           admin_user_name = get_user_base(6385061330)[0][1]
           await msg.answer(contacting_message(lang,admin_user_name))
      
@@ -425,8 +734,8 @@ async def start(msg:types.Message ,state : FSMContext):
           
           for i in animes:
                num += 1
-               bot='ANIDUBLE_RASMIY_BOT'
-               text += f"<b>{num}.</b> [ <a href='https://t.me/{bot}?start={i[0]}'>{i[1]}</a> ]\n"
+               # bot='ANIDUBLE_RASMIY_BOT'
+               text += f"<b>{num}.</b> [ <a href='https://t.me/{ANIDUBLE}?start={i[0]}'>{i[1]}</a> ]\n"
 
           await msg.answer(text)
 
@@ -440,22 +749,56 @@ async def start(msg:types.Message ,state : FSMContext):
                await User.menu.set()
    
           elif text == "🔍Anime Qidirish":
+                    text = """<b>📚 Anime nomini yoki kodini yozayotganda e'tiborli bo‘ling!</b>
+
+<i>🔍 Imloviy xatolardan, masalan:</i>
+- nuqta `.`
+- vergul `,`
+- yoki boshqa tinish belgilari kabi xatolardan saqlaning.
+
+<b>📥 Masalan:</b> <i>Solo Leveling</i>
+<b>📌 Kalit so‘z:</b> <i>Solo</i>
+
+🧠 <b>Agar tushungan bo‘lsangiz, animening to‘liq nomi yoki kodini kiriting.</b>
+<i>❗️ Agar menda topilmasa yoki xatolik yuz bersa, @AniLebot dan qidirib ko‘ring.</i>"""
+
+                    with open("media/aniduble.jpg", "rb") as photo:
+                         await msg.answer_photo(
+                              photo=photo,
+                              caption=text,
+                              reply_markup=back_user_button_btn(lang),
+                              parse_mode="HTML"
+                         )
+                    await User.searching.set()
+
+          elif text == "🤝 Hamkorlik dasturi":
                await msg.answer(
-                    "<b>🔍 Qidirish uchun anime nomi yoki ID sini yuboring!</b>",
-                    reply_markup=back_user_button_btn(lang),
+                    "<b>🤝 Hamkorlik dasturini amalga oshirmoqchi bo'lsangiz,</b>\n"
+                    "<i>📩 @aniduble_admin  bilan bog'laning!</i>\n\n"
+                    "<a href='https://t.me/aniduble_admin '>🔗 Sizni kutamiz! 🚀</a>",
                     parse_mode="HTML"
                )
-
-               await User.searching.set()
-     
     
      elif is_vip =="True":
+          
 
-          if text == "🔍Anime Qidirish" or text == "🔍Запросить аниме":
+          if text == "🤝 Hamkorlik dasturi":
+               await msg.answer(
+                    "<b>🤝 Hamkorlik dasturini amalga oshirmoqchi bo'lsangiz,</b>\n"
+                    "<i>📩 @aniduble_admin  bilan bog'laning!</i>\n\n"
+                    "<a href='https://t.me/aniduble_admin '>🔗 Sizni kutamiz! 🚀</a>",
+                    parse_mode="HTML"
+               )
+          
+
+          elif text == "📚Qo'llanma" or text == "📚Qo'llanma":
+               await msg.answer(about_bot_message(lang,msg.from_user.id))
+
+          elif text == "🔍Anime Qidirish" or text == "🔍Запросить аниме":
                await msg.answer("<b>Qidiruv turini tanlang!</b>",reply_markup=search_clbtn(),parse_mode="HTML")
                await User.searching.set()
 
-          elif text == "Animelar ro'yhati 📓" or text == "Animelar ro'yhati 📓":
+          elif text == "📓 Animelar ro'yhati" or text == "Animelar ro'yhati 📓":
                animes = get_animes_base()
           
                f = open(f"animes_list_{msg.from_user.id}.txt", "a",encoding="utf-8")
@@ -477,9 +820,9 @@ async def start(msg:types.Message ,state : FSMContext):
 
                document = InputFile(f"animes_list_{msg.from_user.id}.txt")
 
-               await msg.answer_document(document=document,caption="<b>📓AniDuble botidagi barcha animelar ro'yxati</b>")
+               await msg.answer_document(document=document,caption=f"<b>📓{BOT_NAME} botidagi barcha animelar ro'yxati</b>")
                os.remove(f"animes_list_{msg.from_user.id}.txt")
-               await msg.answer("AniDuble botidagi barcha animelar ro'yxati",reply_markup=user_button_btn(lang,is_vip))     
+               await msg.answer(f"{BOT_NAME} botidagi barcha animelar ro'yxati",reply_markup=user_button_btn(lang,is_vip))     
 
           elif text == "⚡️AniPass":
                is_vip = get_user_is_vip_base(user_id)
@@ -511,7 +854,6 @@ async def start(msg:types.Message ,state : FSMContext):
                
                else:
                     message = "<b>Sizda ⚡️AniPass mavjud emas yoki muddati aniqlanmadi.</b>"
-               print(is_vip)
                await msg.answer(message, reply_markup=user_button_btn(lang, is_vip))
 
           vip = data.get("vip")
@@ -526,16 +868,52 @@ async def start(call: types.CallbackQuery,state : FSMContext):
      lang = (await state.get_data()).get("lang")
      
      await call.message.delete()
-     await call.message.answer("🔍Nomini topa olmayotgan animeingizni Rasmini yuboring",reply_markup=back_user_button_btn(lang))
-     print(90)
+     caption = """<b>🔍 Rasm orqali qidiruv</b>
+
+<i>Qidirilishi kerak bo‘lgan anime sahnasining suratini yuboring.</i>
+
+<b>‼️ DIQQAT:</b>
+<i>Yaxshi natija olish uchun quyidagilarga amal qiling:</i>
+• 🎥 Animening <u>videosidan olingan skrinshot</u> bo‘lishi kerak  
+• ✂️ Faqat <u>asosiy sahna yoki qahramon tasviri</u> bo‘lishi lozim  
+• 🚫 Poster, banner yoki reklamalarni yubormang!
+"""
+
+     with open("media/aniduble.jpg", "rb") as photo:
+          await call.message.answer_photo(
+               photo=photo,
+               caption=caption,
+               reply_markup=back_user_button_btn(lang),
+               parse_mode="HTML"
+          )
+
      await User.search_by_photo.set()
-     print(91)
+
 
 @dp.callback_query_handler(text_contains = "search_id_name",state=User.searching)
 async def start(call: types.CallbackQuery,state : FSMContext):
      lang = (await state.get_data()).get("lang")
      await call.message.delete()
-     await call.message.answer("🔍Qidirish uchun anime nomi yoki ID sini yuboring !",reply_markup=back_user_button_btn(lang))
+     text = """<b>📚 Anime nomini yoki kodini yozayotganda e'tiborli bo‘ling!</b>
+
+<i>🔍 Imloviy xatolardan, masalan:</i>
+- nuqta `.`
+- vergul `,`
+- yoki boshqa tinish belgilari kabi xatolardan saqlaning.
+
+<b>📥 Masalan:</b> <i>Solo Leveling</i>
+<b>📌 Kalit so‘z:</b> <i>Solo</i>
+
+🧠 <b>Agar tushungan bo‘lsangiz, animening to‘liq nomi yoki kodini kiriting.</b>
+<i>❗️ Agar menda topilmasa yoki xatolik yuz bersa, @AniLebot dan qidirib ko‘ring.</i>"""
+
+     with open("media/aniduble.jpg", "rb") as photo:
+          await call.message.answer_photo(
+               photo=photo,
+               caption=text,
+               reply_markup=back_user_button_btn(lang),
+               parse_mode="HTML"
+          )
      await User.searching.set()
 
 @dp.callback_query_handler(text_contains="search_teg", state=User.searching)
@@ -584,11 +962,24 @@ async def prompt_genre_input(call: types.CallbackQuery, state: FSMContext):
     lang = data.get("lang", "uz")
     
     await call.message.delete()
-    await call.message.answer(
-        "Iltimos, qidirish uchun anime janrini kiriting:" if lang == "uz" else
-        "Пожалуйста, введите жанр аниме для поиска:"
-    )
-    
+    caption = f"""<b>📚 {BOT_NAME} Bot: Janr orqali qidiruv</b>
+
+<i>Endi siz o‘zingizga yoqadigan anime janrlarini yozib, ular bo‘yicha tavsiyalar olishingiz mumkin!</i>
+
+🔍 <b>Masalan:</b> <i>Ekshen, Komediya, Drama</i>
+
+🤖 <b>Bot shu janrda mavjud animelarni ko‘rsatadi.</b>
+<i>Bu orqali siz o‘z sevimli janringizdagi animelarni tez va oson topishingiz mumkin.</i>
+"""
+    with open("media/aniduble.jpg", "rb") as photo:
+          await call.message.answer_photo(
+               photo=photo,
+               caption=caption,
+               reply_markup=back_user_button_btn(lang),
+               parse_mode="HTML"
+          )
+
+     
     await User.genre_input.set()
     await call.answer()
 
@@ -607,32 +998,26 @@ async def handle_genre_search(message: types.Message, state: FSMContext, page=1)
     logger.info(f"Searching for genre: {user_genre}, page: {page}")
 
     try:
-        # Get all unique genres from the database
         cursor.execute("SELECT DISTINCT genre FROM anime")
         raw_genres = [genre[0].lower() for genre in cursor.fetchall() if genre[0]]
         
-        # Split comma-separated genres into individual tags
         all_genres = []
         for genre in raw_genres:
             all_genres.extend([g.strip() for g in genre.split(",") if g.strip()])
-        all_genres = list(set(all_genres))  # Remove duplicates
+        all_genres = list(set(all_genres)) 
         logger.info(f"All genre tags: {all_genres}")
-
-        # Find close matches for the user-input genre
         matched_genres = []
         if process and fuzz:
             matches = process.extract(user_genre, all_genres, scorer=fuzz.token_sort_ratio, limit=5)
             matched_genres = [match[0] for match in matches if match[1] >= 60]
             logger.info(f"Fuzzy matched genres: {matches}")
-            # Add exact match if user_genre exists in all_genres
             if user_genre in all_genres:
                 matched_genres.append(user_genre)
         else:
-            # Fallback to exact match if fuzzywuzzy is not installed
             matched_genres = [user_genre] if user_genre in all_genres else []
             logger.warning("fuzzywuzzy not installed, using exact match")
 
-        matched_genres = list(set(matched_genres))  # Remove duplicates
+        matched_genres = list(set(matched_genres))  
         logger.info(f"Final matched genres: {matched_genres}")
 
         if not matched_genres:
@@ -940,6 +1325,12 @@ async def start(msg:types.Message ,state : FSMContext):
           
           if not anime:
                await msg.answer(not_found_this_anime_message(lang,text),reply_markup=back_button_btn())
+
+               await state.finish()
+               await User.menu.set()
+               async with state.proxy() as data:
+                    data["lang"] = lang
+               await msg.answer(main_menu_message(lang),reply_markup=user_button_btn(lang,is_vip_user))
           else:
                if text.isdigit():
                     await msg.answer(select_function_message(lang),reply_markup=admin_searched_animes_clbtn(anime))
@@ -993,7 +1384,7 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
 
      if vip_type == "vip":
           text = (
-    "💫 <b>Aniduble botidan ⚡️ AniPass</b> sotib olganingizdan keyingi qulayliklar:\n"
+    f"💫 <b>{BOT_NAME} botidan ⚡️ AniPass</b> sotib olganingizdan keyingi qulayliklar:\n"
     "°•───────────────────\n"
     "🎉 <b>Qulayliklar</b>\n\n"
     "🔹️ Botni 2x tezlikda ishlatish\n"
@@ -1070,15 +1461,14 @@ async def qosh(call: types.CallbackQuery, state: FSMContext):
      date_1 = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
      date_1 = datetime.strptime(date_1, "%Y-%m-%d %H:%M:%S")
      result = date_1 + relativedelta(days= +5)
-     result = str(result)[:-9]  # So'nggi sekundlarni olib tashlash
-
+     result = str(result)[:-9]  
      update_free_status(user_id,1)
      update_user_vip_base(user_id, result)
 
 
      text = (
     f"🎉 <b>{call.from_user.username}</b>!\n\n"
-    "🎊 <b>Tabriklaymiz!</b> Siz <b>AniDuble</b> botidan tekinga <b>AniPass</b> aktivlashtirdingiz ✅️\n\n"
+    f"🎊 <b>Tabriklaymiz!</b> Siz <b>{BOT_NAME}</b> botidan tekinga <b>AniPass</b> aktivlashtirdingiz ✅️\n\n"
     "⚠️ <i>Eslatma:</i>\n"
     "Bu obuna faqat <b>5 kun</b> amal qiladi.\n"
     "5 kundan so‘ng <b>AniPass</b> avtomatik tarzda bekor bo‘ladi.\n\n"
@@ -1111,11 +1501,11 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
           await a.delete()
           await call.message.delete()
 
-          text = """
-<b>🔥AniDuble botida ⚡️AniPass obuna sotib olish uchun :</b>
+          text = f"""
+<b>🔥{BOT_NAME} botida ⚡️AniPass obuna sotib olish uchun :</b>
 
-1. <code>9860 1201 6396 3172</code>
-   <b>( Umarbek Azimov )</b>
+1. <code>{KARTA_RAQAM}</code>
+   <b>( {KARTA_NOMI} )</b>
 
 <b>kartaga 💵5.000 so'm miqdorda pul o'tkazing</b>
 
@@ -1228,7 +1618,7 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
      is_vip_user= data.get("vip")
 
      user_id = call.from_user.id
-     if anime_id != "🔙Ortga":
+     if anime_id.isdigit():
           anime_id = int(anime_id)
           anime = get_anime_base(anime_id)
 
@@ -1254,7 +1644,7 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
 
           await User.anime_menu.set()
           await call.message.answer(anime_menu_message(lang,anime),reply_markup=anime_menu_clbtn(lang,anime_id,False,have_serie,is_vip))
-
+ 
      else:
           await call.message.delete()
           await state.finish()
@@ -1263,7 +1653,7 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
           async with state.proxy() as data:
                data["lang"] = lang
 
-          await call.message.answer("🔥",reply_markup=user_button_btn(lang,is_vip))
+          await call.message.answer("🔥",reply_markup=user_button_btn(lang,is_vip_user))
 
 
 

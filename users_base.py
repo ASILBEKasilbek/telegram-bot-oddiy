@@ -11,7 +11,6 @@ conn = sqlite3.connect(db_path, timeout=10)
 cursor = conn.cursor()
 
 def creating_table():
-    # Jadval yaratish va yangi ustunlar qo'shish
     conn.execute("""CREATE TABLE IF NOT EXISTS about_user(
         user_id INTEGER UNIQUE PRIMARY KEY NOT NULL,
         username TEXT,
@@ -117,7 +116,6 @@ def creating_table():
     END;
     """)
 
-    # Mavjud anime jadvalidan ma'lumotlarni FTS jadvaliga ko'chirish
     conn.execute("""
     INSERT INTO anime_fts(rowid, name, genre, teg)
     SELECT anime_id, name, genre, teg FROM anime;
@@ -129,24 +127,28 @@ def creating_table():
 def user_exists(user_id):
     cursor.execute("SELECT 1 FROM about_user WHERE user_id = ?", (user_id,))
     return cursor.fetchone() is not None
-
+    
+def clear_users():
+    try:
+        with sqlite3.connect(db_path, timeout=10) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM about_user")
+            conn.commit()
+    except sqlite3.Error as e:
+        raise
+    
 def update_statistics():
     today = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # total users
     cursor.execute("SELECT COUNT(*) FROM about_user")
     total_users = cursor.fetchone()[0]
 
-    # active users (misol uchun: so‘nggi 24 soat ichida free > 0 bo‘lganlar)
     cursor.execute("SELECT COUNT(*) FROM about_user WHERE free > 0")
     active_users = cursor.fetchone()[0]
 
-    # new users today (user_id raqamidan kelib chiqib bugun qo‘shilganlarni aniqlash uchun, real loyihada date ustuni bo‘lishi kerak edi)
-    # Hozircha misol sifatida so‘nggi 24 soat ichida free > 0 bo‘ganlarni olamiz
     cursor.execute("SELECT COUNT(*) FROM about_user WHERE free > 0")
     new_users_today = cursor.fetchone()[0]
 
-    # total vip users
     cursor.execute("SELECT COUNT(*) FROM about_user WHERE is_vip != 0")
     total_vip_users = cursor.fetchone()[0]
 
@@ -735,34 +737,34 @@ creating_table()
 update_statistics()  
 
 
-quality = "720p"
-cursor = conn.execute("SELECT anime_id FROM anime WHERE anime_id <= 71")
-result = cursor.fetchall()
-which_anime = [row[0] for row in result]
+# quality = "720p"
+# cursor = conn.execute("SELECT anime_id FROM anime WHERE anime_id <= 71")
+# result = cursor.fetchall()
+# which_anime = [row[0] for row in result]
 
-which_anime.sort(reverse=True)
-serie_id = 1570
-def get_series_by_anime_id(anime_id):
-    cursor = conn.execute("SELECT series FROM anime WHERE anime_id = ?", (anime_id,))
-    result = cursor.fetchone()
-    if result:
-        return result[0]  
-    return None 
+# which_anime.sort(reverse=True)
+# serie_id = 1570
+# def get_series_by_anime_id(anime_id):
+#     cursor = conn.execute("SELECT series FROM anime WHERE anime_id = ?", (anime_id,))
+#     result = cursor.fetchone()
+#     if result:
+#         return result[0]  
+#     return None 
 
 
-def check_series(anime_id, seria_num):
-    cursor = conn.execute(
-        "SELECT 1 FROM series WHERE which_anime = ? AND serie_num = ? LIMIT 1",
-        (anime_id, seria_num)
-    )
-    result = cursor.fetchone()
-    return result is not None
+# def check_series(anime_id, seria_num):
+#     cursor = conn.execute(
+#         "SELECT 1 FROM series WHERE which_anime = ? AND serie_num = ? LIMIT 1",
+#         (anime_id, seria_num)
+#     )
+#     result = cursor.fetchone()
+#     return result is not None
 
-for i in which_anime:
-    seria=get_series_by_anime_id(i)
-    for j in range(1,seria+1):
-        if check_series(i, j):
-            continue
-        else:
-            add_serie_base(i, serie_id, j, quality)
-            serie_id -= 1
+# for i in which_anime:
+#     seria=get_series_by_anime_id(i)
+#     for j in range(1,seria+1):
+#         if check_series(i, j):
+#             continue
+#         else:
+#             add_serie_base(i, serie_id, j, quality)
+#             serie_id -= 1

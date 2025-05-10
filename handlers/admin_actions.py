@@ -11,6 +11,22 @@ import shutil
 from .image_maker import image_making
 import os
 from aiogram.types import InputFile
+from aiogram import types
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from config import BOT_NAME,BOT_TOKEN,insert_data
+from aiogram import types
+from aiogram.dispatcher import FSMContext
+from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+import sqlite3
+import os
+import shutil
+import re
+import ast
+from config import BOT_NAME, BOT_TOKEN, BOT_OWNERS,ANIDUBLE
+import logging
+from datetime import datetime
+from aiogram.types import CallbackQuery
 
 anime_treller_chat = -1001990975355
 anime_series_chat = -1002076256295
@@ -29,6 +45,17 @@ class Admin(StatesGroup):
     subscribe = State()
     
     sure = State()
+
+class Hamkor(StatesGroup):
+    token = State()
+    reklama_kanal = State()
+    admin = State()
+    karta_nomi = State()
+    karta_raqam = State()
+    bot_username = State()
+    kanal_nomi = State()
+    add = State()
+    bot1_username =State()
 
 class Add_anime(StatesGroup):
     type = State()
@@ -61,7 +88,6 @@ class Edit_serie(StatesGroup):
     search = State()
     series_menu = State()
     editing_menu = State()
-
     upload_new = State()
     delete_serie = State()
 
@@ -85,10 +111,27 @@ class Add_sponser(StatesGroup):
     adding = State()
     add =   State()
     remove = State()
+class AddSponsor(StatesGroup):
+    menu = State()
+    adding = State()
+
+class AddPostChannel(StatesGroup):
+    menu = State()
+    adding = State()
 
 
-from aiogram import types
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+    
+@dp.callback_query_handler(text='back', state='*')
+async def go_back_to_menu(callback: CallbackQuery, state: FSMContext):
+    await state.finish()
+    await Admin.menu.set()
+    await callback.message.edit_text(
+        "👔<b>Admin panel</b>",
+        reply_markup=admin_button_btn(),
+        parse_mode="HTML"
+    )
+
 
 @dp.message_handler(content_types=["text"], state=Posting.select_anime)
 async def select_anime_for_post(msg: types.Message, state: FSMContext):
@@ -154,7 +197,6 @@ async def process_anime_selection(call: types.CallbackQuery, state: FSMContext):
     anime_name = anime[3]  # anime nomi
     await state.update_data(anime_id=anime_id, anime_name=anime_name)
     
-    # Animenning seriyalarini olish
     series = get_anime_series_base(anime_id)
     if not series:
         await call.message.edit_text(f"'{anime_name}' uchun seriyalar topilmadi.")
@@ -163,7 +205,7 @@ async def process_anime_selection(call: types.CallbackQuery, state: FSMContext):
     
     series_buttons = InlineKeyboardMarkup(row_width=3)
     for serie in series:
-        serie_num = serie[2]  # serie_num
+        serie_num = serie[2]
         series_buttons.add(InlineKeyboardButton(text=f"{serie_num}-qism", callback_data=f"serie_{serie[1]}"))  # serie_id
     series_buttons.add(InlineKeyboardButton(text="🔙Ortga", callback_data="back_to_anime"))
 
@@ -198,15 +240,239 @@ async def select_series_for_post(call: types.CallbackQuery, state: FSMContext):
     user_data = await state.get_data()
     await call.message.edit_text(f"'{user_data['anime_name']}' animening {serie_num}-qismini qaysi kanalga post qilamiz?", reply_markup=channel_buttons)
 
-from aiogram import types
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+logging.basicConfig(level=logging.INFO, filename='bot_setup.log')
+
+# Bot tokenini so'rash
+@dp.callback_query_handler(text="qaytish")
+async def bosqich_start(callback: types.CallbackQuery, state: FSMContext):
+    await state.finish()
+    await Admin.menu.set()
+
+    await callback.message.answer("✅ Admin panelga qaytildi!")
+
+
+# Bot tokenini so'rash
+@dp.callback_query_handler(text="hamkor_qoshish")
+async def bosqich_start(call: types.CallbackQuery):
+    await call.message.edit_text("1. Bot tokenini yuboring:")
+    await Hamkor.token.set()
+
+# Bot tokenini qabul qilish
+@dp.message_handler(state=Hamkor.token)
+async def step1(msg: types.Message, state: FSMContext):
+    await state.update_data(token=msg.text)
+    await msg.answer("2. Reklama chiqariladigan kanal username yoki ID ni yuboring:")
+    await Hamkor.reklama_kanal.set()
+
+# Reklama kanalini qabul qilish
+@dp.message_handler(state=Hamkor.reklama_kanal)
+async def step2(msg: types.Message, state: FSMContext):
+    await state.update_data(reklama_kanal=msg.text)
+    await msg.answer("3. Admin username yoki ID ni yuboring:")
+    await Hamkor.admin.set()
+
+# Admin ma'lumotlarini qabul qilish
+@dp.message_handler(state=Hamkor.admin)
+async def step3(msg: types.Message, state: FSMContext):
+    await state.update_data(admin=msg.text)
+    await msg.answer("4. Karta egasi ismini yuboring:")
+    await Hamkor.karta_nomi.set()
+
+# Karta nomini qabul qilish
+@dp.message_handler(state=Hamkor.karta_nomi)
+async def step4(msg: types.Message, state: FSMContext):
+    await state.update_data(karta_nomi=msg.text)
+    await msg.answer("5. Karta raqamini yuboring:")
+    await Hamkor.karta_raqam.set()
+
+# Karta raqamini qabul qilish
+@dp.message_handler(state=Hamkor.karta_raqam)
+async def step5(msg: types.Message, state: FSMContext):
+    await state.update_data(karta_raqam=msg.text)
+    await msg.answer("6. Bot username’ini yuboring:")
+    await Hamkor.bot_username.set()
+
+# Bot username'ini qabul qilish
+@dp.message_handler(state=Hamkor.bot_username)
+async def step6(msg: types.Message, state: FSMContext):
+    await state.update_data(bot_username=msg.text)
+    await msg.answer("7. Kanal nomini yuboring:")
+    await Hamkor.kanal_nomi.set()
+
+# Kanal nomini qabul qilish va tasdiqlash tugmasini ko'rsatish
+@dp.message_handler(state=Hamkor.kanal_nomi)
+async def step7(msg: types.Message, state: FSMContext):
+    await state.update_data(kanal_nomi=msg.text)
+    tugma = InlineKeyboardMarkup()
+    tugma.add(InlineKeyboardButton("✅ Ishga tushurish", callback_data="hamkor_add"))
+    await msg.answer("✅ Ma'lumotlar tayyor, ishga tushurish uchun tugmani bosing.", reply_markup=tugma)
+    await Hamkor.add.set()
+
+# Ma'lumotlarni bazaga saqlash va papka yaratish
+@dp.callback_query_handler(state=Hamkor.add, text="hamkor_add")
+async def save_and_create_bot(call: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    token = data.get("token")
+    reklama_kanal = data.get("reklama_kanal")
+    admin = data.get("admin")
+    karta_nomi = data.get("karta_nomi")
+    karta_raqam = data.get("karta_raqam")
+    bot_username = data.get("bot_username")
+    kanal_nomi = data.get("kanal_nomi")
+
+    # Ma'lumotlarni validatsiya qilish
+    if not all([token, reklama_kanal, admin, karta_nomi, karta_raqam, bot_username, kanal_nomi]):
+        await call.message.answer("❌ Barcha ma'lumotlarni to'ldirish kerak!")
+        await state.finish()
+        return
+
+    # Bazaga ma'lumotlarni saqlash
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    db_path = os.path.join(BASE_DIR, 'hamkor.db')
+    print(db_path)
+    try:
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO hamkor (token, reklama_kanal, admin, karta_nomi, karta_raqam, bot_username, kanal_nomi)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (token, reklama_kanal, admin, karta_nomi, karta_raqam, bot_username, kanal_nomi))
+            conn.commit()
+            logging.info(f"Bot ma'lumotlari bazaga saqlandi: {bot_username}")
+    except sqlite3.Error as e:
+        logging.error(f"Baza xatosi: {e}")
+        await call.message.answer("❌ Ma'lumotlarni saqlashda xato yuz berdi!")
+        await state.finish()
+        return
+
+    # Bot uchun papka yaratish va fayllarni nusxalash
+    try:
+        await create_bot_folder(BASE_DIR, data)
+        await call.message.answer(f"✅ Bot muvaffaqiyatli yaratildi: {bot_username}")
+    except Exception as e:
+        logging.error(f"Papka yaratish xatosi: {e}")
+        await call.message.answer(f"❌ Bot papkasini yaratishda xato: {str(e)}")
+    finally:
+        await state.finish()
+
+async def create_bot_folder(BASE_DIR, bot_data):
+    from users_base import clear_users  # clear_users funksiyasini import qilish
+
+    files_to_copy = [
+        '.gitignore', 'handlers', 'media',
+        'bot.py', 'database.db', 'dispatcher.py', 'filters.py',
+        'requirements.txt', 'throttling.py', 'users_base.py'
+    ]
+    target_root = os.path.join(BASE_DIR, 'Hamkorlik')
+    os.makedirs(target_root, exist_ok=True)
+
+    # Yangi bot uchun papka nomini yaratish
+    bot_count = len([name for name in os.listdir(target_root) if name.startswith('bot')]) + 1
+    bot_folder = os.path.join(target_root, f'bot{bot_count}')
+    os.makedirs(bot_folder, exist_ok=True)
+    logging.info(f"Bot papkasi yaratildi: {bot_folder}")
+
+    # database.db faylini tozalash
+    db_path = os.path.join(BASE_DIR, 'database.db')
+    try:
+        clear_users()  # Foydalanuvchilarni o‘chirish
+    except Exception as e:
+        logging.error(f"database.db ni tozalashda xato: {e}")
+        raise
+
+    # Fayllarni nusxalash
+    for item in files_to_copy:
+        src = os.path.join(BASE_DIR, item)
+        dst = os.path.join(bot_folder, item)
+        if not os.path.exists(src):
+            logging.error(f"Manba fayl topilmadi: {src}")
+            raise FileNotFoundError(f"Muammo: {item} fayli topilmadi!")
+        if os.path.isdir(src):
+            shutil.copytree(src, dst, dirs_exist_ok=True)
+            logging.info(f"Direktoriya nusxalandi: {item}")
+        else:
+            shutil.copy2(src, dst)
+            logging.info(f"Fayl nusxalandi: {item}")
+
+    # BOT_OWNERS ni parsing qilish
+    try:
+        bot_owners = ast.literal_eval(BOT_OWNERS)
+        if not isinstance(bot_owners, list):
+            raise ValueError("BOT_OWNERS must be a list")
+    except (ValueError, SyntaxError) as e:
+        logging.error(f"BOT_OWNERS parsing xatosi: {e}")
+        raise ValueError("BOT_OWNERS noto'g'ri formatda")
+
+    # config.py faylini yaratish
+    config_content = f'''BOT_TOKEN = "{bot_data['token']}"
+REKLAMA = "{bot_data['reklama_kanal']}"
+ADMIN = "{bot_data['admin']}"
+KARTA_NOMI = "{bot_data['karta_nomi']}"
+KARTA_RAQAM = "{bot_data['karta_raqam']}"
+ANIDUBLE = "{bot_data['bot_username']}"
+BOT_NAME = "{bot_data['kanal_nomi']}"
+BOT_OWNERS = {repr(bot_owners)}
+'''
+    config_path = os.path.join(bot_folder, 'config.py')
+    try:
+        with open(config_path, 'w', encoding='utf-8') as f:
+            f.write(config_content)
+        logging.info(f"config.py yaratildi: {config_path}")
+    except OSError as e:
+        logging.error(f"config.py yozish xatosi: {e}")
+        raise
+
+
+@dp.callback_query_handler(text="hamkor_list")
+async def show_hamkor_list(call: types.CallbackQuery):
+    conn = sqlite3.connect("hamkor.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT kanal_nomi, bot_username FROM hamkor")
+    rows = cursor.fetchall()
+    conn.close()
+
+    if not rows:
+        await call.message.edit_text("📭 Hozircha hech qanday bot qo‘shilmagan.")
+        return
+
+    text = "🤖 Botlar ro‘yxati:\n\n"
+    for i, row in enumerate(rows, 1):
+        kanal_nomi, bot_username = row
+        text += f"{i}. {kanal_nomi} - {bot_username}\n"
+
+    await call.message.edit_text(text)
+    
+    await Admin.menu.set()
+
+
+@dp.callback_query_handler(text="hamkor_remove")
+async def remove_step_start(call: types.CallbackQuery):
+    await call.message.edit_text("🗑 O‘chirmoqchi bo‘lgan botning usernameʼini yuboring (masalan: @mybot):")
+    await Hamkor.bot1_username.set()
+
+@dp.message_handler(state=Hamkor.bot1_username)
+async def remove_step_process(msg: types.Message, state: FSMContext):
+    bot_username = msg.text.strip()
+    conn = sqlite3.connect("hamkor.db")
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM hamkor WHERE bot_username = ?", (bot_username,))
+    conn.commit()
+    affected = cursor.rowcount
+    conn.close()
+
+    if affected:
+        await msg.answer("✅ Bot bazadan o‘chirildi.")
+    else:
+        await msg.answer("❌ Bunday bot topilmadi.")
+    await state.finish()
+    await Admin.menu.set()
+
 
 def back_button_inline():
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton(text="🔙 Ortga", callback_data="back_to_menu"))
     return markup
-
-
 
 @dp.callback_query_handler(state=Posting.select_channel)
 async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
@@ -239,7 +505,6 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
         await state.finish()
         return
     
-    # Anime va seriya ma'lumotlarini olish
     user_data = await state.get_data()
     anime_id = user_data.get("anime_id")
     anime_name = user_data.get("anime_name")
@@ -251,35 +516,6 @@ async def select_channel_for_post(call: types.CallbackQuery, state: FSMContext):
         await call.message.edit_text("Anime ma'lumotlari topilmadi! 😕", reply_markup=back_button_inline())
         await state.finish()
         return
-    
-    anime = anime_data[0]
-    anime_lang = anime[1]  # lang
-    anime_genre = anime[5]  # genre
-    anime_teg = anime[6]  # teg
-    anime_dub = anime[7]  # dub
-    anime_serie = anime[8]  # series
-    anime_film = anime[9]  # films
-    anime_status = anime[11]  # status
-    anime_views = anime[12]  # views
-    
-    # Status va tilni formatlash
-    if anime_status == "loading":
-        status = "OnGoing"
-    elif anime_status == "finished":
-        status = "Tugallangan"
-    else:
-        status = anime_status
-    
-    if anime_lang == "uz":
-        lang = "O‘zbekcha"
-    elif anime_lang == "ru":
-        lang = "Ruscha"
-    elif anime_lang == "jp":
-        lang = "Yaponcha"
-    elif anime_lang == "en":
-        lang = "Inglizcha"
-    else:
-        lang = anime_lang
     
     post_text = f"📥  <i>{anime_name}</i> - {serie_num}-qism 🔥 @AniDuble"
     try:
@@ -329,7 +565,6 @@ async def start(msg:types.Message ,state : FSMContext):
 @dp.message_handler(content_types=["text"],state=Admin.menu)
 async def start(msg:types.Message ,state : FSMContext):
     text = msg.text
-    
     if text == "🆕Anime qo'shish":
         await state.finish()
         await Add_anime.language.set()
@@ -352,36 +587,54 @@ async def start(msg:types.Message ,state : FSMContext):
         await state.finish()
         await PostingSerie.search.set()
         await msg.answer("<b>🔍Yangi qism qo'shilganligi haqida post qilinishi kerak bo'lgan animeni nomini kiriting</b>",reply_markup=back_button_btn())
-    elif text == "Kanal qo'shish":
-        await state.finish()
-        await Add_sponser.add.set()
-        await msg.answer("Qo'shmoqchi bo'lgan kanal linkini yuboring",reply_markup=back_button_btn())
-    elif text == "Kanal o'chirish":
-        await state.finish()
-        await Add_sponser.remove.set()
-        await msg.answer("O'chirmoqchi bo'lgan kanal linkini yuboring",reply_markup=back_button_btn())
-    elif text == "Kanallar":
-        await state.finish()  # Stateni tugatish
-        channels = get_channels()
-        if not channels:
-            await msg.answer("Hozircha hech qanday kanal qo'shilmagan.")
-            return
-        text = "📢 <b>Kanallar ro'yxati:</b>\n\n"
-        for ch in channels:
-            text += (
-                f"🔹 <b>Nomi:</b> {ch[1]}\n"
-                f"🔗 <b>Havola:</b> {ch[2]}\n"
-                f"🕒 <b>Qo'shilgan sana:</b> {ch[4]}\n\n"
-            )
+    elif text == "➕️ Kanal qo'shish":
+        if ANIDUBLE == "@ANIDUBLE_RASMIY_BOT":
+            await state.finish()
+            await Add_sponser.add.set()
+            await msg.answer("Qo'shmoqchi bo'lgan kanal linkini yuboring",reply_markup=back_button_btn())
+        else:
+            await msg.answer("""<b>❌️ Ushbu funksya sizda faollashtrilmagan faollashtrish uchun @Aniduble_admin ga yozing</b>""",parse_mode="HTML")
+    elif text == "➖ Kanal o'chirish":
+        if ANIDUBLE == "@ANIDUBLE_RASMIY_BOT":
+            await state.finish()
+            await Add_sponser.remove.set()
+            await msg.answer("O'chirmoqchi bo'lgan kanal linkini yuboring",reply_markup=back_button_btn())
+        else:
+            await msg.answer("""<b>❌️ Ushbu funksya sizda faollashtrilmagan faollashtrish uchun @Aniduble_admin ga yozing</b>""",parse_mode="HTML")
+    elif text == "♻️Kanallar":
+        if ANIDUBLE == "@ANIDUBLE_RASMIY_BOT":
+            await state.finish()
+            channels = get_channels()
+            if not channels:
+                await msg.answer("Hozircha hech qanday kanal qo'shilmagan.")
+                return
+            text = "📢 <b>Kanallar ro'yxati:</b>\n\n"
+            for ch in channels:
+                text += (
+                    f"🔹 <b>Nomi:</b> {ch[1]}\n"
+                    f"🔗 <b>Havola:</b> {ch[2]}\n"
+                    f"🕒 <b>Qo'shilgan sana:</b> {ch[4]}\n\n"
+                )
 
-        await msg.answer(text, parse_mode="HTML")
-        await Admin.menu.set()
+            await msg.answer(text, parse_mode="HTML")
+            await Admin.menu.set()
+        else:
+            await msg.answer("""<b>❌️ Ushbu funksya sizda faollashtrilmagan faollashtrish uchun @Aniduble_admin ga yozing</b>""",parse_mode="HTML")
+    elif text == "🤝🏻 Hamkorlik dasturi":
+        if ANIDUBLE == "@ANIDUBLE_RASMIY_BOT":
+            await state.finish()
+            await msg.answer("Tanlang:",reply_markup=hamkor_btn())
 
-    elif text == "Qismli post":
-        await state.finish()
-        await Posting.select_anime.set()
-        await msg.answer("Qaysi animeni qismini post qilamiz",reply_markup=back_button_btn())
-
+        else:
+            await msg.answer("""<b>❌️ Ushbu funksya sizda faollashtrilmagan faollashtrish uchun @Aniduble_admin ga yozing</b>""",parse_mode="HTML")
+    elif text == "🚀 Qismli post":
+    
+        if ANIDUBLE == "@ANIDUBLE_RASMIY_BOT":
+            await state.finish()
+            await Posting.select_anime.set()
+            await msg.answer("Qaysi animeni qismini post qilamiz",reply_markup=back_button_btn())
+        else:
+            await msg.answer("""<b>❌️ Ushbu funksya sizda faollashtrilmagan faollashtrish uchun @Aniduble_admin ga yozing</b>""",parse_mode="HTML")
     elif text == "✏️Animeni tahrirlash":
         await state.finish()
         a = await msg.answer(". . .",reply_markup=admin_button_btn())
@@ -406,22 +659,16 @@ async def start(msg:types.Message ,state : FSMContext):
         await Admin.send_message_to_one.set()
         await msg.answer("💬<b>Xabar yuborish uchun foydalanuvchi ID sini yoki Usernamesini kiriting !</b>",reply_markup=back_button_btn())
         
+
     elif text == "🔐Majburiy a'zo":
-        user = get_user_is_admin_base(msg.from_user.id)[0][0]
-        if user == True: 
-            await Admin.subscribe.set()
-            sponsor = get_sponsor_base()
-            await state.finish()
-            if not sponsor:
-                await Add_sponser.adding.set()
-                await msg.answer("🔒<b>Majburiy a'zo qo'shish</b> uchun majburiy a'zoga qo'shilishi kerak bo'lgan <b>kanaldan istalgan habarni botga ulashing</b>\n❗️Bot siz <b>majbury a'zo qilmoqchi bo'lgan kanalda</b> admin etib tayinlangan bo'lishi zarur !",reply_markup=back_button_btn())
-            else:
-                await Add_sponser.menu.set()
-                a = await msg.answer("⏳",reply_markup=back_button_btn())
-                await a.delete()
-                await msg.answer("🔒<b>Sponsorlikdan chiqarilishi</b> kerak bo'lgan <b>Kanalni tanlang</b> yoki ➕ <b>orqali yana qo'shing</b> ",reply_markup=sponsor_list_clbtn(sponsor))
-        else:
-            await msg.answer("😕<b>Bu faqat Adminlar uchun</b>")
+        markup = InlineKeyboardMarkup(row_width=1)
+        markup.add(
+            InlineKeyboardButton("📢 Post qilish uchun kanal", callback_data="manage_post_channels"),
+            InlineKeyboardButton("🔐 Majburiy a'zo uchun kanal", callback_data="manage_mandatory_channels"),
+            InlineKeyboardButton("🔙 Ortga", callback_data="back_to_admin_menu")
+        )
+        await msg.answer("🔐 Kanal boshqaruvi:", reply_markup=markup)
+        await ChannelManagement.select_type.set()
 
     elif text == "👔Staff qo'shish":
         user = get_user_is_admin_base(msg.from_user.id)[0][0]
@@ -465,6 +712,7 @@ async def start(msg:types.Message ,state : FSMContext):
         await a.delete()  # Yuklanayotgan xabarni o'chirish
         await msg.answer("/start ni bosing ✅")  # Asosiy menyuga qaytish
 
+
 @dp.message_handler(content_types=['text'], state=Add_sponser.add)
 async def qosh(msg: types.Message, state: FSMContext):
     text = msg.text.strip()
@@ -499,7 +747,6 @@ async def qosh(msg: types.Message, state: FSMContext):
         await msg.answer(f"✅ <b>{name}</b> kanali muvaffaqiyatli qo‘shildi!", reply_markup=admin_button_btn())
 
     except Exception as e:
-        print(f"[Kanal qo‘shish xatosi] {e}")
         await msg.answer("❗️Kanalni qo‘shib bo‘lmadi. Bot kanalga admin ekanligini tekshiring.")
 @dp.message_handler(content_types=['text'], state=Add_sponser.remove)
 async def ochirish(msg: types.Message, state: FSMContext):
@@ -525,8 +772,7 @@ async def ochirish(msg: types.Message, state: FSMContext):
         await msg.answer("👔<b>Admin panel</b>", reply_markup=admin_button_btn())
 
     except Exception as e:
-        print(f"[Kanal o‘chirish xatosi] {e}")
-        await msg.answer("❗️Kanalni o‘chirishda xatolik yuz berdi.")
+        await msg.answer("❗️Kanalni o'chirishda xatolik yuz berdi.")
 
 @dp.message_handler(content_types=["text"],state=Posting.search)
 async def start(msg:types.Message ,state : FSMContext):
@@ -884,7 +1130,10 @@ async def start(msg:types.Message ,state : FSMContext):
     await asyncio.sleep(1)
 
     a = await a.edit_text("♻️<b>Post uchun rasm yasalmoqda</b> . . .")
-    path_output = image_making()
+    if  ANIDUBLE == "@ANIDUBLE_RASMIY_BOT":
+        path_output = image_making()
+    else:
+        path_output=path
     await asyncio.sleep(1)
     a = await a.edit_text("♻️<b>Keraksiz fayllar o'chirilmoqda</b> . . .")
     await asyncio.sleep(1)
@@ -982,9 +1231,7 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
 """
 
         photo = InputFile("handlers/post_media/output.jpg")
-        a=-1002023259288
-
-        await dp.bot.send_photo(chat_id=a,photo=photo,caption=caption,reply_markup=serie_post_link_clbtn(anime_id))
+        await dp.bot.send_photo(chat_id=-1002023259288,photo=photo,caption=caption,reply_markup=serie_post_link_clbtn(anime_id))
         os.remove("handlers/post_media/output.jpg")
 
         await a.delete()
@@ -1050,7 +1297,7 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
         await state.finish()
         await Admin.menu.set()
         shutil.rmtree(f"post_{call.from_user.id}")
-        await call.message.answer(f"✅<b>Muvaffaqiyatli post qilindi</b>. <a href='https://t.me/Aniduble/{message_id}'>👁‍🗨Postni ko'rish</a>",reply_markup=admin_button_btn(),disable_web_page_preview=True)
+        await call.message.answer(f"✅<b>Muvaffaqiyatli post qilindi</b>. <a href='https://t.me/{BOT_NAME}/{message_id}'>👁‍🗨Postni ko'rish</a>",reply_markup=admin_button_btn(),disable_web_page_preview=True)
 
     elif command == "add":
         await Posting.search.set()
@@ -1157,62 +1404,605 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
     await call.message.delete()
     await call.message.answer("👔<b>Admin panel</b>",reply_markup=admin_button_btn())
 
-@dp.callback_query_handler(text_contains = "add",state=Add_sponser.menu)
-async def qosh(call: types.CallbackQuery,state : FSMContext):
-    await Add_sponser.adding.set()
-    await call.message.answer("🔒<b>Majburiy a'zo qo'shish</b> uchun <b>Kanal ID</b> sini yuboring\n❗️Bo't siz <b>majbury a'zo qilmoqchi bo'lgan kanalda</b> admin etib tayinlangan bo'lishi zarur !",reply_markup=back_button_btn())
-    await call.message.delete()
+
+
+import logging
+import sqlite3
+import datetime
+import asyncio
+from aiogram import types
+from aiogram.dispatcher import FSMContext
+from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from config import BOT_NAME, BOT_TOKEN, ANIDUBLE
+from .buttons import back_button_btn
+from typing import List, Tuple
+
+# Logging sozlamalari
+logging.basicConfig(level=logging.INFO, filename='bot_setup.log')
+
+# Majburiy a'zolik va post kanallari uchun holatlar
+class ChannelManagement(StatesGroup):
+    select_type = State()
+    add_mandatory_channel = State()
+    remove_mandatory_channel = State()
+    add_post_channel = State()
+    remove_post_channel = State()
+    view_channel_stats = State()
+
+# Bazada kanallar jadvallarini yaratish
+def create_channels_tables():
+    try:
+        with sqlite3.connect("hamkor.db") as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS mandatory_channels (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    channel_link TEXT NOT NULL UNIQUE,
+                    channel_name TEXT NOT NULL,
+                    channel_type TEXT NOT NULL,
+                    expire_date TEXT,
+                    subscribers_count INTEGER DEFAULT 0,
+                    added_date TEXT NOT NULL
+                )
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS post_channels (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    channel_link TEXT NOT NULL UNIQUE,
+                    channel_name TEXT NOT NULL,
+                    posts_count INTEGER DEFAULT 0,
+                    added_date TEXT NOT NULL
+                )
+            """)
+            conn.commit()
+            logging.info("Kanallar jadvallari muvaffaqiyatli yaratildi.")
+    except sqlite3.Error as e:
+        logging.error(f"Kanallar jadvallarini yaratishda xato: {e}")
+
+# Jadvallarni yaratishni chaqirish
+create_channels_tables()
+
+# Kanal linkini validatsiya qilish
+async def validate_channel_link(bot, channel_link: str) -> bool:
+    if not (channel_link.startswith("@") or channel_link.startswith("https://t.me/")):
+        return False
+    try:
+        chat = await bot.get_chat(channel_link)
+        return chat.type in ["channel", "supergroup"]
+    except Exception as e:
+        logging.error(f"Kanal linkini tekshirishda xato: {e}")
+        return False
+
+# Kanal linkini to‘g‘ri URL formatiga o‘tkazish
+def format_channel_url(channel_link: str) -> str:
+    if channel_link.startswith("https://t.me/"):
+        return channel_link
+    elif channel_link.startswith("@"):
+        return f"https://t.me/{channel_link.lstrip('@')}"
+    return channel_link
+
+# Majburiy kanallar ro'yxatini olish
+def get_mandatory_channels() -> List[Tuple]:
+    try:
+        with sqlite3.connect("hamkor.db") as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM mandatory_channels")
+            return cursor.fetchall()
+    except sqlite3.Error as e:
+        logging.error(f"Majburiy kanallarni olishda xato: {e}")
+        return []
+
+# Post kanallar ro'yxatini olish
+def get_post_channels() -> List[Tuple]:
+    try:
+        with sqlite3.connect("hamkor.db") as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM post_channels")
+            return cursor.fetchall()
+    except sqlite3.Error as e:
+        logging.error(f"Post kanallarni olishda xato: {e}")
+        return []
+
+# Back button klaviaturasini aniq ta'minlash
+def get_back_button():
+    markup = InlineKeyboardMarkup(row_width=1)
+    markup.add(InlineKeyboardButton("🔙 Ortga", callback_data="back_to_main_menu"))
+    return markup
+
+# Admin paneli uchun inline klaviatura
+def get_admin_inline_button():
+    markup = InlineKeyboardMarkup(row_width=1)
+    markup.add(
+        InlineKeyboardButton("🔐 Majburiy a'zo", callback_data="manage_channels"),
+        InlineKeyboardButton("📊 Statistika", callback_data="view_admin_stats"),
+        InlineKeyboardButton("🔙 Chiqish", callback_data="back")
+    )
+    return markup
+
+# Majburiy a'zo menyusi
+# @dp.message_handler(content_types=["text"], state=Admin.menu)
+# async def admin_menu(msg: types.Message, state: FSMContext):
+#     text = msg.text
+#     if text == "🔐Majburiy a'zo":
+#         markup = InlineKeyboardMarkup(row_width=1)
+#         markup.add(
+#             InlineKeyboardButton("📢 Post qilish uchun kanal", callback_data="manage_post_channels"),
+#             InlineKeyboardButton("🔐 Majburiy a'zo uchun kanal", callback_data="manage_mandatory_channels"),
+#             InlineKeyboardButton("🔙 Ortga", callback_data="back")
+#         )
+#         await msg.answer("🔐 Kanal boshqaruvi:", reply_markup=markup)
+#         await ChannelManagement.select_type.set()
+#         logging.info(f"User {msg.from_user.id} entered ChannelManagement.select_type state")
+
+
+@dp.callback_query_handler(state=ChannelManagement.select_type)
+async def process_channel_management(call: types.CallbackQuery, state: FSMContext):
+    logging.info(f"Callback received: {call.data}, State: {await state.get_state()}")
     
-@dp.message_handler(content_types=["any"],state=Add_sponser.adding)
-async def start(msg:types.Message ,state : FSMContext):
-    
-    channel_id = msg.text
-    
-    if channel_id == "🔙Ortga":
+    try:
+        # Asosiy kanal boshqaruv menyusiga qaytish
+        if call.data == "back_to_main_menu":
+            markup = InlineKeyboardMarkup(row_width=1)
+            markup.add(
+                InlineKeyboardButton("📢 Post qilish uchun kanal", callback_data="manage_post_channels"),
+                InlineKeyboardButton("🔐 Majburiy a'zo uchun kanal", callback_data="manage_mandatory_channels"),
+                InlineKeyboardButton("🔙 Ortga", callback_data="back")
+            )
+            await call.message.edit_text("🔐 Kanal boshqaruvi:", reply_markup=markup)
+            logging.info(f"User {call.from_user.id} returned to main menu")
+            return
+
+        # Kanal turini tanlash
+        if call.data in ["manage_mandatory_channels", "manage_post_channels"]:
+            await state.update_data(channel_management_type=call.data)
+            markup = InlineKeyboardMarkup(row_width=3)
+            if call.data == "manage_mandatory_channels":
+                channels = get_mandatory_channels()
+                if not channels:
+                    markup.add(
+                        InlineKeyboardButton("➕ Kanal qo'shish", callback_data="add_channel"),
+                        InlineKeyboardButton("🔙 Ortga", callback_data="back_to_main_menu")
+                    )
+                    await call.message.edit_text(
+                        "📭 Hozircha hech qanday majburiy a'zolik kanali qo'shilmagan.\n"
+                        "Yangi kanal qo'shish uchun tugmani bosing:",
+                        reply_markup=markup
+                    )
+                    logging.info(f"User {call.from_user.id} viewed empty mandatory channels list")
+                    return
+
+                for channel in channels:
+                    channel_link = format_channel_url(channel[1])
+                    channel_name = channel[2]
+                    expire_info = f" (Muddat: {channel[4]})" if channel[4] else ""
+                    subscribers = channel[5]
+                    try:
+                        markup.row(
+                            InlineKeyboardButton(f"{channel_name}{expire_info}", url=channel_link),
+                            InlineKeyboardButton(f"👥 {subscribers}", callback_data="view_channel_stats"),
+                            InlineKeyboardButton("🗑", callback_data=f"remove_channel_{channel[0]}")
+                        )
+                    except Exception as e:
+                        logging.error(f"Error creating button for channel {channel_link}: {str(e)}")
+                        continue
+
+                markup.row(
+                    InlineKeyboardButton("➕ Kanal qo'shish", callback_data="add_channel"),
+                    InlineKeyboardButton("🔙 Ortga", callback_data="back_to_main_menu")
+                )
+
+                await call.message.edit_text(
+                    "🔐 <b>Majburiy a'zolik kanallari ro'yxati:</b>\n\n"
+                    "Kanal nomi | A'zolar soni | O'chirish",
+                    reply_markup=markup,
+                    parse_mode="HTML"
+                )
+                logging.info(f"User {call.from_user.id} viewed mandatory channels in table format")
+            else:
+                channels = get_post_channels()
+                if not channels:
+                    markup.add(
+                        InlineKeyboardButton("➕ Kanal qo'shish", callback_data="add_channel"),
+                        InlineKeyboardButton("🔙 Ortga", callback_data="back_to_main_menu")
+                    )
+                    await call.message.edit_text(
+                        "📭 Hozircha hech qanday post qilish kanali qo'shilmagan.\n"
+                        "Yangi kanal qo'shish uchun tugmani bosing:",
+                        reply_markup=markup
+                    )
+                    logging.info(f"User {call.from_user.id} viewed empty post channels list")
+                    return
+
+                markup.add(
+                    InlineKeyboardButton("➕ qo'shish", callback_data="add_channel"),
+                    InlineKeyboardButton("➖ o'chirish", callback_data="remove_channel"),
+                    InlineKeyboardButton("📋 ro'yxat", callback_data="list_channels"),
+                    InlineKeyboardButton("📊 Statistika", callback_data="view_stats"),
+                    InlineKeyboardButton("🔙 Ortga", callback_data="back_to_main_menu")
+                )
+                await call.message.edit_text("📢 Post qilish kanallarini boshqarish:", reply_markup=markup)
+                logging.info(f"User {call.from_user.id} selected manage_post_channels")
+            return
+
+        user_data = await state.get_data()
+        management_type = user_data.get("channel_management_type")
+        if not management_type:
+            await state.finish()
+            await Admin.menu.set()
+            await call.message.edit_text(
+                "✅ Admin panelga qaytildi!"
+            )
+
+        if call.data == "add_channel":
+            if management_type == "manage_mandatory_channels":
+                await ChannelManagement.add_mandatory_channel.set()
+                await call.message.edit_text(
+                    "➕ Qo'shmoqchi bo'lgan kanal linkini yuboring (masalan, @ChannelName yoki https://t.me/ChannelName):\n"
+                    "Kanal turi (oddiy/yopiq) va zayafkali bo'lsa muddatni kiriting (masalan: @ChannelName oddiy yoki @ChannelName zayafkali 7 kun)",
+                    reply_markup=get_back_button()
+                )
+                logging.info(f"User {call.from_user.id} entered add_mandatory_channel state")
+            elif management_type == "manage_post_channels":
+                await ChannelManagement.add_post_channel.set()
+                await call.message.edit_text(
+                    "➕ Qo'shmoqchi bo'lgan kanal linkini yuboring (masalan, @ChannelName yoki https://t.me/ChannelName):",
+                    reply_markup=get_back_button()
+                )
+                logging.info(f"User {call.from_user.id} entered add_post_channel state")
+
+        elif call.data.startswith("remove_channel_"):
+            channel_id = call.data.split("_")[-1]
+            if management_type == "manage_mandatory_channels":
+                try:
+                    with sqlite3.connect("hamkor.db") as conn:
+                        cursor = conn.cursor()
+                        cursor.execute("DELETE FROM mandatory_channels WHERE id = ?", (channel_id,))
+                        conn.commit()
+                        affected = cursor.rowcount
+
+                    if affected:
+                        await call.message.edit_text(
+                            f"✅ Kanal (ID: {channel_id}) majburiy a'zolik ro'yxatidan o'chirildi!",
+                            reply_markup=get_back_button()
+                        )
+                        logging.info(f"Channel {channel_id} removed from mandatory_channels by user {call.from_user.id}")
+                    else:
+                        await call.message.edit_text(
+                            "❌ Bunday kanal topilmadi!",
+                            reply_markup=get_back_button()
+                        )
+                        logging.info(f"Channel {channel_id} not found in mandatory_channels")
+                except sqlite3.Error as e:
+                    logging.error(f"Baza xatosi: {e}")
+                    await call.message.edit_text(
+                        "❌ Ma'lumotlarni o'chirishda xato yuz berdi!",
+                        reply_markup=get_back_button()
+                    )
+                return
+
+        elif call.data == "list_channels":
+            if management_type == "manage_mandatory_channels":
+                channels = get_mandatory_channels()
+                markup = InlineKeyboardMarkup(row_width=3)
+                if not channels:
+                    markup.add(
+                        InlineKeyboardButton("➕ Kanal qo'shish", callback_data="add_channel"),
+                        InlineKeyboardButton("🔙 Ortga", callback_data="back_to_main_menu")
+                    )
+                    await call.message.edit_text(
+                        "📭 Hozircha hech qanday majburiy a'zolik kanali qo'shilmagan.",
+                        reply_markup=markup
+                    )
+                    logging.info(f"User {call.from_user.id} viewed empty mandatory channels list")
+                    return
+                for channel in channels:
+                    channel_link = format_channel_url(channel[1])
+                    channel_name = channel[2]
+                    expire_info = f" (Muddat: {channel[4]})" if channel[4] else ""
+                    subscribers = channel[5]
+                    try:
+                        markup.row(
+                            InlineKeyboardButton(f"{channel_name}{expire_info}", url=channel_link),
+                            InlineKeyboardButton(f"👥 {subscribers}", callback_data="view_channel_stats"),
+                            InlineKeyboardButton("🗑", callback_data=f"remove_channel_{channel[0]}")
+                        )
+                    except Exception as e:
+                        logging.error(f"Error creating button for channel {channel_link}: {str(e)}")
+                        continue
+
+                markup.row(
+                    InlineKeyboardButton("➕ Kanal qo'shish", callback_data="add_channel"),
+                    InlineKeyboardButton("🔙 Ortga", callback_data="back_to_main_menu")
+                )
+
+                await call.message.edit_text(
+                    "🔐 <b>Majburiy a'zolik kanallari ro'yxati:</b>\n\n"
+                    "Kanal nomi | A'zolar soni | O'chirish",
+                    reply_markup=markup,
+                    parse_mode="HTML"
+                )
+                logging.info(f"User {call.from_user.id} viewed mandatory channels list in table format")
+
+            elif management_type == "manage_post_channels":
+                channels = get_post_channels()
+                if not channels:
+                    markup = InlineKeyboardMarkup(row_width=1)
+                    markup.add(
+                        InlineKeyboardButton("➕ Kanal qo'shish", callback_data="add_channel"),
+                        InlineKeyboardButton("🔙 Ortga", callback_data="back_to_main_menu")
+                    )
+                    await call.message.edit_text(
+                        "📭 Hozircha hech qanday post qilish kanali qo'shilmagan.",
+                        reply_markup=markup
+                    )
+                    logging.info(f"User {call.from_user.id} viewed empty post channels list")
+                    return
+                text = "📢 <b>Post qilish kanallari ro'yxati:</b>\n\n"
+                for i, channel in enumerate(channels, 1):
+                    text += (
+                        f"{i}. {channel[2]} ({channel[1]})\n"
+                        f"   Postlar: {channel[3]}\n"
+                        f"   Qo'shilgan: {channel[4]}\n\n"
+                    )
+                await call.message.edit_text(text, parse_mode="HTML", reply_markup=get_back_button())
+                logging.info(f"User {call.from_user.id} viewed post channels list")
+
+        elif call.data == "view_stats":
+            if management_type == "manage_mandatory_channels":
+                channels = get_mandatory_channels()
+                markup = InlineKeyboardMarkup(row_width=3)
+                if not channels:
+                    markup.add(
+                        InlineKeyboardButton("➕ Kanal qo'shish", callback_data="add_channel"),
+                        InlineKeyboardButton("🔙 Ortga", callback_data="back_to_main_menu")
+                    )
+                    await call.message.edit_text(
+                        "📭 Hozircha hech qanday majburiy a'zolik kanali qo'shilmagan.",
+                        reply_markup=markup
+                    )
+                    logging.info(f"User {call.from_user.id} viewed empty mandatory channels stats")
+                    return
+                for channel in channels:
+                    channel_link = format_channel_url(channel[1])
+                    channel_name = channel[2]
+                    expire_info = f" (Muddat: {channel[4]})" if channel[4] else ""
+                    subscribers = channel[5]
+                    try:
+                        markup.row(
+                            InlineKeyboardButton(f"{channel_name}{expire_info}", url=channel_link),
+                            InlineKeyboardButton(f"👥 {subscribers}", callback_data="view_channel_stats"),
+                            InlineKeyboardButton("🗑", callback_data=f"remove_channel_{channel[0]}")
+                        )
+                    except Exception as e:
+                        logging.error(f"Error creating button for channel {channel_link}: {str(e)}")
+                        continue
+
+                markup.row(
+                    InlineKeyboardButton("➕ Kanal qo'shish", callback_data="add_channel"),
+                    InlineKeyboardButton("🔙 Ortga", callback_data="back_to_main_menu")
+                )
+
+                await call.message.edit_text(
+                    "📊 <b>Majburiy a'zolik kanallari statistikasi:</b>\n\n"
+                    "Kanal nomi | A'zolar soni | O'chirish",
+                    reply_markup=markup,
+                    parse_mode="HTML"
+                )
+                logging.info(f"User {call.from_user.id} viewed mandatory channels stats in table format")
+
+            elif management_type == "manage_post_channels":
+                channels = get_post_channels()
+                if not channels:
+                    markup = InlineKeyboardMarkup(row_width=1)
+                    markup.add(
+                        InlineKeyboardButton("➕ Kanal qo'shish", callback_data="add_channel"),
+                        InlineKeyboardButton("🔙 Ortga", callback_data="back_to_main_menu")
+                    )
+                    await call.message.edit_text(
+                        "📭 Hozircha hech qanday post qilish kanali qo'shilmagan.",
+                        reply_markup=markup
+                    )
+                    logging.info(f"User {call.from_user.id} viewed empty post channels stats")
+                    return
+                text = "📊 <b>Post qilish kanallari statistikasi:</b>\n\n"
+                total_posts = sum(channel[3] for channel in channels)
+                text += f"📈 <b>Jami postlar:</b> {total_posts}\n\n"
+                for i, channel in enumerate(channels, 1):
+                    text += (
+                        f"{i}. {channel[2]}\n"
+                        f"   Postlar: {channel[3]}\n\n"
+                    )
+                await call.message.edit_text(text, parse_mode="HTML", reply_markup=get_back_button())
+                logging.info(f"User {call.from_user.id} viewed post channels stats")
+
+        else:
+            await state.finish()
+            await Admin.menu.set()
+            await call.message.edit_text(
+                "✅ Admin panelga qaytildi!"
+            )
+    except Exception as e:
         await state.finish()
         await Admin.menu.set()
-        await msg.answer("👔<b>Admin panel</b>",reply_markup=admin_button_btn())
-    else:
-        try:
-            channel_id = int(msg.forward_from_chat.id)
+        await call.message.edit_text(
+                "✅ Admin panelga qaytildi!"
+            )
+
+# Majburiy a'zolik kanalini qo'shish
+@dp.message_handler(content_types=["text"], state=ChannelManagement.add_mandatory_channel)
+async def add_mandatory_channel(msg: types.Message, state: FSMContext):
+    input_text = msg.text.strip()
+    parts = input_text.split()
+    channel_link = parts[0]
+
+    if not await validate_channel_link(msg.bot, channel_link):
+        await msg.answer(
+            "❌ Noto'g'ri kanal formati yoki kanal mavjud emas! Iltimos, @ChannelName yoki https://t.me/ChannelName shaklida yuboring.",
+            reply_markup=get_back_button()
+        )
+        logging.error(f"Invalid channel link: {channel_link}")
+        return
+
+    channel_type = "oddiy"
+    expire_date = None
+    if len(parts) > 1:
+        if parts[1].lower() in ["oddiy", "yopiq"]:
+            channel_type = parts[1].lower()
+        elif parts[1].lower() == "zayafkali":
+            channel_type = "zayafkali"
             try:
-                chat = await dp.bot.get_chat(chat_id=channel_id)
-                await dp.bot.get_chat_administrators(chat_id=channel_id)
-                if msg.chat.type == "private":
-                    channel_id = chat.id
-                    name = chat.title
-                    link = chat.invite_link
-                else:
-                    channel_id = chat.id
-                    name = chat.title
-                    link = f"https://t.me/{chat.username}"
-                    
-                add_sponsor_base(channel_id,name,link)
-                await state.finish()
-                await Admin.menu.set()
-                await msg.answer("✅Ushbu kanal <b>Majbury a'zoga qo'shildi !</b>",reply_markup=admin_button_btn())
-                
-            except:
-                await msg.answer("❗️<b>Bot kanalga Admin qilinmagan !</b>")
-        except:
-            await msg.answer("❗️<b>Xabar kanal yoki guruh nomidan ulashilmagan</b>")
+                days = int(parts[2])
+                expire_date = (datetime.datetime.now() + datetime.timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+            except (IndexError, ValueError):
+                await msg.answer(
+                    "❌ Zayafkali kanal uchun muddatni kunlarda kiriting (masalan: @ChannelName zayafkali 7)",
+                    reply_markup=get_back_button()
+                )
+                logging.error(f"Invalid zayafkali duration: {input_text}")
+                return
+
+    try:
+        with sqlite3.connect("hamkor.db") as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT OR IGNORE INTO mandatory_channels (channel_link, channel_name, channel_type, expire_date, added_date) VALUES (?, ?, ?, ?, ?)",
+                (channel_link, channel_link.split("/")[-1], channel_type, expire_date, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            )
+            conn.commit()
+            affected = cursor.rowcount
+
+        if affected:
+            await msg.answer(f"✅ Kanal ({channel_link}) majburiy a'zolik ro'yxatiga qo'shildi!", reply_markup=get_admin_inline_button())
+            logging.info(f"Channel added to mandatory_channels: {channel_link}")
+        else:
+            await msg.answer("⚠️ Bu kanal allaqachon ro'yxatda mavjud!", reply_markup=get_admin_inline_button())
+            logging.info(f"Channel already exists in mandatory_channels: {channel_link}")
         
-@dp.callback_query_handler(text_contains = "sponsor",state=Add_sponser.menu)
-async def qosh(call: types.CallbackQuery,state : FSMContext):
-    channel_id = call.data.split(",")[1]
-    delete_sponsor_base(int(channel_id))
-    await dp.bot.leave_chat(chat_id=channel_id)
-    await state.finish()
-    await Admin.menu.set()
-    await call.message.answer("✅<b>Ushbu kanal</b> Majbury a'zodan <b>o'chirib yuborildi !</b>",reply_markup=admin_button_btn())
-    await call.message.delete()
-    
-@dp.callback_query_handler(text_contains = "exit",state=Add_sponser.menu)
-async def qosh(call: types.CallbackQuery,state : FSMContext):
-    await state.finish()
-    await Admin.menu.set()
-    await call.message.delete()
-    await call.message.answer("👔<b>Admin panel</b>",reply_markup=admin_button_btn())
+        await state.finish()
+        await Admin.menu.set()
+
+    except sqlite3.Error as e:
+        logging.error(f"Baza xatosi: {e}")
+        await msg.answer("❌ Ma'lumotlarni saqlashda xato yuz berdi!", reply_markup=get_admin_inline_button())
+        await state.finish()
+
+# Majburiy a'zolik kanalini o'chirish
+@dp.message_handler(content_types=["text"], state=ChannelManagement.remove_mandatory_channel)
+async def remove_mandatory_channel(msg: types.Message, state: FSMContext):
+    channel_link = msg.text.strip()
+    try:
+        with sqlite3.connect("hamkor.db") as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM mandatory_channels WHERE channel_link = ?", (channel_link,))
+            conn.commit()
+            affected = cursor.rowcount
+
+        if affected:
+            await msg.answer(f"✅ Kanal ({channel_link}) majburiy a'zolik ro'yxatidan o'chirildi!", reply_markup=get_admin_inline_button())
+            logging.info(f"Channel removed from mandatory_channels: {channel_link}")
+        else:
+            await msg.answer("❌ Bunday kanal topilmadi!", reply_markup=get_admin_inline_button())
+            logging.info(f"Channel not found in mandatory_channels: {channel_link}")
+        
+        await state.finish()
+        await Admin.menu.set()
+
+    except sqlite3.Error as e:
+        logging.error(f"Baza xatosi: {e}")
+        await msg.answer("❌ Ma'lumotlarni o'chirishda xato yuz berdi!", reply_markup=get_admin_inline_button())
+        await state.finish()
+
+# Post qilish kanalini qo'shish
+@dp.message_handler(content_types=["text"], state=ChannelManagement.add_post_channel)
+async def add_post_channel(msg: types.Message, state: FSMContext):
+    channel_link = msg.text.strip()
+    if not await validate_channel_link(msg.bot, channel_link):
+        await msg.answer(
+            "❌ Noto'g'ri kanal formati yoki kanal mavjud emas! Iltimos, @ChannelName yoki https://t.me/ChannelName shaklida yuboring.",
+            reply_markup=get_back_button()
+        )
+        logging.error(f"Invalid channel link: {channel_link}")
+        return
+
+    try:
+        with sqlite3.connect("hamkor.db") as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT OR IGNORE INTO post_channels (channel_link, channel_name, added_date) VALUES (?, ?, ?)",
+                (channel_link, channel_link.split("/")[-1], datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            )
+            conn.commit()
+            affected = cursor.rowcount
+
+        if affected:
+            await msg.answer(f"✅ Kanal ({channel_link}) post qilish ro'yxatiga qo'shildi!", reply_markup=get_admin_inline_button())
+            logging.info(f"Channel added to post_channels: {channel_link}")
+        else:
+            await msg.answer("⚠️ Bu kanal allaqachon ro'yxatda mavjud!", reply_markup=get_admin_inline_button())
+            logging.info(f"Channel already exists in post_channels: {channel_link}")
+        
+        await state.finish()
+        await Admin.menu.set()
+
+    except sqlite3.Error as e:
+        logging.error(f"Baza xatosi: {e}")
+        await msg.answer("❌ Ma'lumotlarni saqlashda xato yuz berdi!", reply_markup=get_admin_inline_button())
+        await state.finish()
+
+# Post qilish kanalini o'chirish
+@dp.message_handler(content_types=["text"], state=ChannelManagement.remove_post_channel)
+async def remove_post_channel(msg: types.Message, state: FSMContext):
+    channel_link = msg.text.strip()
+    try:
+        with sqlite3.connect("hamkor.db") as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM post_channels WHERE channel_link = ?", (channel_link,))
+            conn.commit()
+            affected = cursor.rowcount
+
+        if affected:
+            await msg.answer(f"✅ Kanal ({channel_link}) post qilish ro'yxatidan o'chirildi!", reply_markup=get_admin_inline_button())
+            logging.info(f"Channel removed from post_channels: {channel_link}")
+        else:
+            await msg.answer("❌ Bunday kanal topilmadi!", reply_markup=get_admin_inline_button())
+            logging.info(f"Kanal topilmadi: {channel_link}")
+
+        await state.finish()
+        await Admin.menu.set()
+
+    except sqlite3.Error as e:
+        logging.error(f"Baza xatosi: {e}")
+        await msg.answer("❌ Ma'lumotlarni o'chirishda xato yuz berdi!", reply_markup=get_admin_inline_button())
+        await state.finish()
+
+# Zayafkali kanallarni tekshirish va o'chirish
+async def check_expired_channels():
+    try:
+        with sqlite3.connect("hamkor.db") as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM mandatory_channels WHERE expire_date IS NOT NULL")
+            channels = cursor.fetchall()
+            current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            for channel in channels:
+                if channel[4] and channel[4] < current_time:
+                    cursor.execute("DELETE FROM mandatory_channels WHERE id = ?", (channel[0],))
+                    logging.info(f"Zayafkali kanal o'chirildi: {channel[1]}")
+            conn.commit()
+    except sqlite3.Error as e:
+        logging.error(f"Zayafkali kanallarni tekshirishda xato: {e}")
+
+# Bot ishga tushganda zayafkali kanallarni tekshirish
+async def schedule_expired_check():
+    while True:
+        await check_expired_channels()
+        await asyncio.sleep(3600)  # Har soatda tekshirish
+
+
+
+
+
+
 
 async def anime_serie_edit_func(anime_id,anime_name,msg,call,serie_num,serie_id,state):
 
@@ -1425,7 +2215,7 @@ async def start(msg:types.Message ,state : FSMContext):
             new_serie_id = a.message_id
 
             update_serie_base(serie_id,new_serie_id,quality)
-            await msg.answer(f"🟢<b><i>{anime_name}</i> animeisning <i>{serie_num} - seriyasi</i> yangisiga alishtrildi !</b>")
+            await msg.answer(f"🟢<b><i>{anime_name}</i> animesining <i>{serie_num} - seriyasi</i> yangisiga alishtrildi !</b>")
 
             await asyncio.sleep(1)
 
