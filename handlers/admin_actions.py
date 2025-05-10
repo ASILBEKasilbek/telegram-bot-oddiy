@@ -605,21 +605,21 @@ async def start(msg:types.Message ,state : FSMContext):
         await PostingSerie.search.set()
         await msg.answer("<b>🔍Yangi qism qo'shilganligi haqida post qilinishi kerak bo'lgan animeni nomini kiriting</b>",reply_markup=back_button_btn())
     elif text == "➕️ Kanal qo'shish":
-        if ANIDUBLE == "@ANIDUBLE_RASMIY_BOT":
+        if ANIDUBLE == "ANIDUBLE_RASMIY_BOT":
             await state.finish()
             await Add_sponser.add.set()
             await msg.answer("Qo'shmoqchi bo'lgan kanal linkini yuboring",reply_markup=back_button_btn())
         else:
             await msg.answer("""<b>❌️ Ushbu funksya sizda faollashtrilmagan faollashtrish uchun @Aniduble_admin ga yozing</b>""",parse_mode="HTML")
     elif text == "➖ Kanal o'chirish":
-        if ANIDUBLE == "@ANIDUBLE_RASMIY_BOT":
+        if ANIDUBLE == "ANIDUBLE_RASMIY_BOT":
             await state.finish()
             await Add_sponser.remove.set()
             await msg.answer("O'chirmoqchi bo'lgan kanal linkini yuboring",reply_markup=back_button_btn())
         else:
             await msg.answer("""<b>❌️ Ushbu funksya sizda faollashtrilmagan faollashtrish uchun @Aniduble_admin ga yozing</b>""",parse_mode="HTML")
     elif text == "♻️Kanallar":
-        if ANIDUBLE == "@ANIDUBLE_RASMIY_BOT":
+        if ANIDUBLE == "ANIDUBLE_RASMIY_BOT":
             await state.finish()
             channels = get_channels()
             if not channels:
@@ -646,7 +646,7 @@ async def start(msg:types.Message ,state : FSMContext):
     #         await msg.answer("""<b>❌️ Ushbu funksya sizda faollashtrilmagan faollashtrish uchun @Aniduble_admin ga yozing</b>""",parse_mode="HTML")
     elif text == "🚀 Qismli post":
     
-        if ANIDUBLE == "@ANIDUBLE_RASMIY_BOT":
+        if ANIDUBLE == "ANIDUBLE_RASMIY_BOT":
             await state.finish()
             await Posting.select_anime.set()
             await msg.answer("Qaysi animeni qismini post qilamiz",reply_markup=back_button_btn())
@@ -1147,7 +1147,7 @@ async def start(msg:types.Message ,state : FSMContext):
     await asyncio.sleep(1)
 
     a = await a.edit_text("♻️<b>Post uchun rasm yasalmoqda</b> . . .")
-    if  ANIDUBLE == "@ANIDUBLE_RASMIY_BOT":
+    if  ANIDUBLE == "ANIDUBLE_RASMIY_BOT":
         path_output = image_making()
     else:
         path_output=path
@@ -1250,6 +1250,7 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
         photo = InputFile("handlers/post_media/output.jpg")
 
         await dp.bot.send_photo(chat_id=POST_KANAL,photo=photo,caption=caption,reply_markup=serie_post_link_clbtn(anime_id))
+
         os.remove("handlers/post_media/output.jpg")
 
         await a.delete()
