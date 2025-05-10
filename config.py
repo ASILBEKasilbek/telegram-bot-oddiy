@@ -15,7 +15,7 @@ KARTA_RAQAM = '9860 1201 6396 3172'
 KARTA_NOMI = 'Umarbek Azimov'
 REKLAMA = '@aniduble_rek'
 ADMIN = '@Aniduble_admin'
-ANIDUBLE = '@ANIDUBLE_RASMIY_BOT'
+ANIDUBLE = 'ANIDUBLE_RASMIY_BOT'
 BOT_NAME = "Aniduble"
 POST_KANAL =-1002023259288
 # 2. Hamkorlar bazasini yaratish

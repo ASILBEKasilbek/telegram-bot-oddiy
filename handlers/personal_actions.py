@@ -2110,8 +2110,6 @@ async def start(msg:types.Message ,state : FSMContext):
 
      
      user_id = msg.from_user.id
-     print(text)
-     print(text != "🔙Ortga" or text!="📓 Animelar ro'yhati" or text!="📚Qo'llanma" or text!="💸Reklama va Homiylik" or text!="⚡️AniPass" or text!="🧧 Ongoing animelar" or text!="🤝 Hamkorlik dasturi")
 
      if text not in [
     "🔙Ortga",
@@ -2122,8 +2120,6 @@ async def start(msg:types.Message ,state : FSMContext):
     "🧧 Ongoing animelar",
     "🤝 Hamkorlik dasturi"
 ]:
-    # bu yerga shart bajarilganda bajarilishi kerak bo'lgan kod yoziladi
-          print(123456)
           anime = search_anime_base(text)
           
           if not anime:

@@ -1248,6 +1248,7 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
 """
 
         photo = InputFile("handlers/post_media/output.jpg")
+
         await dp.bot.send_photo(chat_id=POST_KANAL,photo=photo,caption=caption,reply_markup=serie_post_link_clbtn(anime_id))
         os.remove("handlers/post_media/output.jpg")
 
@@ -1306,7 +1307,7 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
 °•───────────────────
 📉<b>Status :</b> {anime_status}
 """ 
-        
+        print(post_watching_clbtn(anime[0][0],anime_list))
 
         a = await dp.bot.send_video(chat_id=POST_KANAL,video=open(f"post_{call.from_user.id}/video.mp4","rb"),caption=text,reply_markup=post_watching_clbtn(anime[0][0],anime_list))
         message_id = a.message_id
@@ -1314,6 +1315,7 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
         await state.finish()
         await Admin.menu.set()
         shutil.rmtree(f"post_{call.from_user.id}")
+        print(BOT_NAME,message_id)
         await call.message.answer(f"✅<b>Muvaffaqiyatli post qilindi</b>. <a href='https://t.me/{BOT_NAME}/{message_id}'>👁‍🗨Postni ko'rish</a>",reply_markup=admin_button_btn(),disable_web_page_preview=True)
 
     elif command == "add":
