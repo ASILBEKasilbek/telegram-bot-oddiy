@@ -31,46 +31,6 @@ load_dotenv()
 from .admin_actions import get_mandatory_channels
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 
-
-
-from aiogram import types, Bot
-
-
-
-
-from users_base import get_user_base, add_user_base, update_statistics_user_base, update_user_vip_base
-from dispatcher import dp
-from aiogram.dispatcher import FSMContext
-from .buttons import *
-from .languages import *
-from .callbacks import *
-from aiogram.dispatcher.filters.state import State, StatesGroup
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-import asyncio
-from datetime import *
-import shutil
-from .searching_by_photo import *
-import os
-from aiogram.types import InputFile
-from .search_photo import handle_photo_from_file
-from dotenv import load_dotenv
-from dateutil.relativedelta import relativedelta
-import logging
-try:
-    from fuzzywuzzy import process, fuzz
-except ImportError:
-    process = None
-    fuzz = None
-from config import ANIDUBLE, BOT_NAME, KARTA_RAQAM, KARTA_NOMI
-from .admin_actions import get_mandatory_channels, get_sponsor
-
-anime_treller_chat = -1001990975355
-anime_series_chat = -1002076256295
-vip_buying_chat = -1002099276344
-
-load_dotenv()
-BOT_TOKEN = os.getenv('BOT_TOKEN')
-
 # Logging sozlamalari
 logging.basicConfig(level=logging.INFO, filename='bot_user.log')
 
@@ -1422,67 +1382,6 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
 
 
 
-async def check_premium_func(user_id):
-     user = get_user_base(user_id)
-     vip = user[0][5]
-     lux = user[0][6]
-
-     is_vip = "True"
-     is_lux = "True"
-     
-     if vip == 0 or vip == "0":
-          is_vip = "False"
-
-     if lux == 0 or lux == "0":
-          is_lux = "False"
-     else:
-          today = datetime.now().strftime("%Y-%m-%d")
-          today2 = datetime.strptime(today, "%Y-%m-%d")
-          users = update_user_vip_over_base(today)
-
-          if users:
-               for i in users:
-                    try:
-                         await dp.bot.kick_chat_member(chat_id=-1002131546047,user_id=i[0])
-                    except:
-                         pass
-
-          if is_vip == "True":
-               is_premium_user = datetime.strptime(vip, "%Y-%m-%d")
-          
-               if today2 >= is_premium_user:
-                    update_user_free_base(user_id)
-                    text = "<b>‼️Sizdagi ⚡️AniPass muddati o'z nihoyasiga yetdi !</b>"
-                    try:
-                         a = await dp.bot.send_message(chat_id=user_id,text=text)
-                         await a.pin()
-                    except:
-                         pass
-                    is_vip = "False"
-               else:
-                    is_vip = "True"
-          
-          if is_lux == "True":
-               is_lux_user = datetime.strptime(lux, "%Y-%m-%d")
-
-               if today2 >= is_lux_user:
-
-                    update_user_free_lux_base(user_id)
-
-                    try:
-                         await dp.bot.kick_chat_member(chat_id=-1002131546047,user_id=user_id)
-                    except:
-                         pass
-
-                    text = "<b>‼️Sizdagi 💎Lux obuna muddati o'z nihoyasiga yetdi !</b>"
-                    try:
-                         a = await dp.bot.send_message(chat_id=user_id,text=text)
-                         await a.pin()
-                    except:
-                         pass
-
-     return is_vip
-
 async def sponsor_cheking_func(msg,lang):
      
      sponsor = get_sponsor()
@@ -1532,68 +1431,76 @@ async def sponsor_cheking_func(msg,lang):
 
 
 async def check_premium_func(user_id):
-     user = get_user_base(user_id)
-     print(user)
-     print(user[0][5],user[0])
-     vip = user[0][5]
+    user = get_user_base(user_id)
 
-     lux = user[0][6]
+    if not user or len(user) == 0:
+        logging.warning(f"Foydalanuvchi topilmadi: {user_id}")
+        return "False"  # yoki None, yoki raise Exception, loyihangizga qarab
 
-     is_vip = "True"
-     is_lux = "True"
-     
-     if vip == 0 or vip == "0":
-          is_vip = "False"
+    if len(user[0]) <= 6:
+        logging.warning(f"Foydalanuvchi ma'lumotlari yetarli emas: {user[0]}")
+        return "False"
 
-     if lux == 0 or lux == "0":
-          is_lux = "False"
-     else:
-          today = datetime.now().strftime("%Y-%m-%d")
-          today2 = datetime.strptime(today, "%Y-%m-%d")
-          users = update_user_vip_over_base(today)
+    print(user[0])
+    vip = user[0][5]
+    lux = user[0][6]
 
-          if users:
-               for i in users:
-                    try:
-                         await dp.bot.kick_chat_member(chat_id=-1002131546047,user_id=i[0])
-                    except:
-                         pass
+    is_vip = "True"
+    is_lux = "True"
 
-          if is_vip == "True":
-               is_premium_user = datetime.strptime(vip, "%Y-%m-%d")
-          
-               if today2 >= is_premium_user:
+    if vip == 0 or vip == "0":
+        is_vip = "False"
+
+    if lux == 0 or lux == "0":
+        is_lux = "False"
+    else:
+        today = datetime.now().strftime("%Y-%m-%d")
+        today2 = datetime.strptime(today, "%Y-%m-%d")
+        users = update_user_vip_over_base(today)
+
+        if users:
+            for i in users:
+                try:
+                    await dp.bot.kick_chat_member(chat_id=-1002131546047, user_id=i[0])
+                except:
+                    pass
+
+        if is_vip == "True":
+            try:
+                is_premium_user = datetime.strptime(vip, "%Y-%m-%d")
+                if today2 >= is_premium_user:
                     update_user_free_base(user_id)
                     text = "<b>‼️Sizdagi ⚡️AniPass muddati o'z nihoyasiga yetdi !</b>"
                     try:
-                         a = await dp.bot.send_message(chat_id=user_id,text=text)
-                         await a.pin()
+                        a = await dp.bot.send_message(chat_id=user_id, text=text)
+                        await a.pin()
                     except:
-                         pass
+                        pass
                     is_vip = "False"
-               else:
-                    is_vip = "True"
-          
-          if is_lux == "True":
-               is_lux_user = datetime.strptime(lux, "%Y-%m-%d")
+            except Exception as e:
+                logging.error(f"VIP sanani o'qishda xatolik: {e}")
+                is_vip = "False"
 
-               if today2 >= is_lux_user:
-
+        if is_lux == "True":
+            try:
+                is_lux_user = datetime.strptime(lux, "%Y-%m-%d")
+                if today2 >= is_lux_user:
                     update_user_free_lux_base(user_id)
-
                     try:
-                         await dp.bot.kick_chat_member(chat_id=-1002131546047,user_id=user_id)
+                        await dp.bot.kick_chat_member(chat_id=-1002131546047, user_id=user_id)
                     except:
-                         pass
-
+                        pass
                     text = "<b>‼️Sizdagi 💎Lux obuna muddati o'z nihoyasiga yetdi !</b>"
                     try:
-                         a = await dp.bot.send_message(chat_id=user_id,text=text)
-                         await a.pin()
+                        a = await dp.bot.send_message(chat_id=user_id, text=text)
+                        await a.pin()
                     except:
-                         pass
+                        pass
+            except Exception as e:
+                logging.error(f"Lux sanani o'qishda xatolik: {e}")
+                is_lux = "False"
 
-     return is_vip
+    return is_vip
 
 @dp.message_handler(content_types=["text"],state=User.menu)
 async def start(msg:types.Message ,state : FSMContext):
@@ -1602,6 +1509,7 @@ async def start(msg:types.Message ,state : FSMContext):
      lang = data.get("lang")
 
      user_id = msg.from_user.id
+
 
      is_vip = await check_premium_func(user_id)
      if not lang:

@@ -212,6 +212,7 @@ async def process_anime_selection(call: types.CallbackQuery, state: FSMContext):
 
     await Posting.select_series.set()
     await call.message.edit_text(f"'{anime_name}' animening qaysi qismini post qilamiz?", reply_markup=series_buttons)
+    
 @dp.callback_query_handler(state=Posting.select_series)
 async def select_series_for_post(call: types.CallbackQuery, state: FSMContext):
     if call.data == "back_to_anime":
@@ -652,6 +653,7 @@ async def start(msg:types.Message ,state : FSMContext):
             await msg.answer("Qaysi animeni qismini post qilamiz",reply_markup=back_button_btn())
         else:
             await msg.answer("""<b>❌️ Ushbu funksya sizda faollashtrilmagan faollashtrish uchun @Aniduble_admin ga yozing</b>""",parse_mode="HTML")
+
     elif text == "✏️Animeni tahrirlash":
         await state.finish()
         a = await msg.answer(". . .",reply_markup=admin_button_btn())
