@@ -1502,6 +1502,8 @@ async def check_premium_func(user_id):
 
     return is_vip
 
+
+
 @dp.message_handler(content_types=["text"],state=User.menu)
 async def start(msg:types.Message ,state : FSMContext):
 

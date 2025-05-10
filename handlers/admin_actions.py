@@ -212,7 +212,7 @@ async def process_anime_selection(call: types.CallbackQuery, state: FSMContext):
 
     await Posting.select_series.set()
     await call.message.edit_text(f"'{anime_name}' animening qaysi qismini post qilamiz?", reply_markup=series_buttons)
-    
+
 @dp.callback_query_handler(state=Posting.select_series)
 async def select_series_for_post(call: types.CallbackQuery, state: FSMContext):
     if call.data == "back_to_anime":
@@ -680,6 +680,7 @@ async def start(msg:types.Message ,state : FSMContext):
         
 
     elif text == "🔐Majburiy a'zo":
+        print(678)
         markup = InlineKeyboardMarkup(row_width=1)
         markup.add(
             InlineKeyboardButton("📢 Post qilish uchun kanal", callback_data="manage_post_channels"),
@@ -1599,16 +1600,6 @@ def get_back_button():
     markup.add(InlineKeyboardButton("🔙 Ortga", callback_data="back_to_main_menu"))
     return markup
 
-# Admin paneli uchun inline klaviatura
-def get_admin_inline_button():
-    markup = InlineKeyboardMarkup(row_width=1)
-    markup.add(
-        InlineKeyboardButton("🔐 Majburiy a'zo", callback_data="manage_channels"),
-        InlineKeyboardButton("📊 Statistika", callback_data="view_admin_stats"),
-        InlineKeyboardButton("🔙 Chiqish", callback_data="back")
-    )
-    return markup
-
 @dp.callback_query_handler(state=ChannelManagement.select_type)
 async def process_channel_management(call: types.CallbackQuery, state: FSMContext):
     logging.info(f"Callback received: {call.data}, State: {await state.get_state()}")
@@ -1705,7 +1696,7 @@ async def process_channel_management(call: types.CallbackQuery, state: FSMContex
         if not management_type:
             await state.finish()
             await Admin.menu.set()
-            await call.message.edit_text("✅ Admin panelga qaytildi!", reply_markup=get_admin_inline_button())
+            await call.message.edit_text("✅ Admin panelga qaytildi!", reply_markup=())
             return
 
         if call.data == "add_channel":
@@ -1893,25 +1884,23 @@ async def process_channel_management(call: types.CallbackQuery, state: FSMContex
             await state.finish()
             await Admin.menu.set()
             new_text = "✅ Admin panelga qaytildi!"
-            markup = get_admin_inline_button()
             if call.message.text != new_text or call.message.reply_markup != markup:
-                await call.message.edit_text(new_text, reply_markup=markup)
+                await call.message.answer(new_text)
             logging.info(f"User {call.from_user.id} returned to admin menu")
 
         else:
             await state.finish()
             await Admin.menu.set()
             new_text = "✅ Admin panelga qaytildi!"
-            markup = get_admin_inline_button()
             if call.message.text != new_text or call.message.reply_markup != markup:
-                await call.message.edit_text(new_text, reply_markup=markup)
+                await call.message.answer(new_text)
             logging.info(f"User {call.from_user.id} returned to admin menu")
 
     except Exception as e:
         logging.error(f"Error in process_channel_management: {e}")
         await state.finish()
         await Admin.menu.set()
-        await call.message.edit_text("✅ Admin panelga qaytildi!", reply_markup=get_admin_inline_button())
+        await call.message.answer("✅ Admin panelga qaytildi!")
 
 # Majburiy a'zolik kanalini qo'shish
 @dp.message_handler(content_types=["text"], state=ChannelManagement.add_mandatory_channel)
@@ -2037,13 +2026,13 @@ async def add_mandatory_channel(msg: types.Message, state: FSMContext):
         if affected:
             await msg.answer(
                 f"✅ {platform.capitalize()} kanal ({channel_link}{f', {channel_username}' if channel_username else ''}) majburiy a'zolik ro'yxatiga qo'shildi!",
-                reply_markup=get_admin_inline_button()
+        
             )
             logging.info(f"Channel added to mandatory_channels: {channel_link}, username: {channel_username}, platform: {platform}")
         else:
             await msg.answer(
                 f"⚠️ Bu {platform} kanal allaqachon ro'yxatda mavjud!",
-                reply_markup=get_admin_inline_button()
+        
             )
             logging.info(f"Channel already exists in mandatory_channels: {channel_link}, platform: {platform}")
         
@@ -2054,7 +2043,7 @@ async def add_mandatory_channel(msg: types.Message, state: FSMContext):
         logging.error(f"Baza xatosi: {e}")
         await msg.answer(
             "❌ Ma'lumotlarni saqlashda xato yuz berdi!",
-            reply_markup=get_admin_inline_button()
+    
         )
         await state.finish()
 
@@ -2070,10 +2059,10 @@ async def remove_mandatory_channel(msg: types.Message, state: FSMContext):
             affected = cursor.rowcount
 
         if affected:
-            await msg.answer(f"✅ Kanal ({channel_input}) majburiy a'zolik ro'yxatidan o'chirildi!", reply_markup=get_admin_inline_button())
+            await msg.answer(f"✅ Kanal ({channel_input}) majburiy a'zolik ro'yxatidan o'chirildi!")
             logging.info(f"Channel removed from mandatory_channels: {channel_input}")
         else:
-            await msg.answer("❌ Bunday kanal topilmadi!", reply_markup=get_admin_inline_button())
+            await msg.answer("❌ Bunday kanal topilmadi!")
             logging.info(f"Channel not found in mandatory_channels: {channel_input}")
         
         await state.finish()
@@ -2081,7 +2070,7 @@ async def remove_mandatory_channel(msg: types.Message, state: FSMContext):
 
     except sqlite3.Error as e:
         logging.error(f"Baza xatosi: {e}")
-        await msg.answer("❌ Ma'lumotlarni o'chirishda xato yuz berdi!", reply_markup=get_admin_inline_button())
+        await msg.answer("❌ Ma'lumotlarni o'chirishda xato yuz berdi!")
         await state.finish()
 
 # Post qilish kanalini qo'shish
@@ -2107,10 +2096,10 @@ async def add_post_channel(msg: types.Message, state: FSMContext):
             affected = cursor.rowcount
 
         if affected:
-            await msg.answer(f"✅ Kanal ({channel_link}) post qilish ro'yxatiga qo'shildi!", reply_markup=get_admin_inline_button())
+            await msg.answer(f"✅ Kanal ({channel_link}) post qilish ro'yxatiga qo'shildi!")
             logging.info(f"Channel added to post_channels: {channel_link}")
         else:
-            await msg.answer("⚠️ Bu kanal allaqachon ro'yxatda mavjud!", reply_markup=get_admin_inline_button())
+            await msg.answer("⚠️ Bu kanal allaqachon ro'yxatda mavjud!")
             logging.info(f"Channel already exists in post_channels: {channel_link}")
         
         await state.finish()
@@ -2118,7 +2107,7 @@ async def add_post_channel(msg: types.Message, state: FSMContext):
 
     except sqlite3.Error as e:
         logging.error(f"Baza xatosi: {e}")
-        await msg.answer("❌ Ma'lumotlarni saqlashda xato yuz berdi!", reply_markup=get_admin_inline_button())
+        await msg.answer("❌ Ma'lumotlarni saqlashda xato yuz berdi!")
         await state.finish()
 
 # Post qilish kanalini o'chirish
@@ -2133,10 +2122,10 @@ async def remove_post_channel(msg: types.Message, state: FSMContext):
             affected = cursor.rowcount
 
         if affected:
-            await msg.answer(f"✅ Kanal ({channel_link}) post qilish ro'yxatidan o'chirildi!", reply_markup=get_admin_inline_button())
+            await msg.answer(f"✅ Kanal ({channel_link}) post qilish ro'yxatidan o'chirildi!")
             logging.info(f"Channel removed from post_channels: {channel_link}")
         else:
-            await msg.answer("❌ Bunday kanal topilmadi!", reply_markup=get_admin_inline_button())
+            await msg.answer("❌ Bunday kanal topilmadi!")
             logging.info(f"Kanal topilmadi: {channel_link}")
 
         await state.finish()
@@ -2144,7 +2133,7 @@ async def remove_post_channel(msg: types.Message, state: FSMContext):
 
     except sqlite3.Error as e:
         logging.error(f"Baza xatosi: {e}")
-        await msg.answer("❌ Ma'lumotlarni o'chirishda xato yuz berdi!", reply_markup=get_admin_inline_button())
+        await msg.answer("❌ Ma'lumotlarni o'chirishda xato yuz berdi!")
         await state.finish()
 
 # Zayafkali kanallarni tekshirish va o'chirish

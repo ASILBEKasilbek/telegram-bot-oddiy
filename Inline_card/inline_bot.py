@@ -145,7 +145,7 @@ async def inline_query_handler(inline_query: types.InlineQuery):
                 buttons = InlineKeyboardMarkup().add(
                     InlineKeyboardButton(
                         text="✨Tomosha qilish✨",
-                        url=f"https://t.me/{a1}?start={series[0][1]}serie"
+                        url=f"https://t.me/{a1}?start={series[0][1]}"
                     )
                 )
                 results.append(
@@ -189,7 +189,7 @@ async def inline_query_handler(inline_query: types.InlineQuery):
             buttons = InlineKeyboardMarkup().add(
                 InlineKeyboardButton(
                     text="✨Tomosha qilish✨",
-                    url=f"https://t.me/{a1}?start={series[0][1]}serie"
+                    url=f"https://t.me/{a1}?start={series[0][1]}"
                 )
             )
             results.append( 
