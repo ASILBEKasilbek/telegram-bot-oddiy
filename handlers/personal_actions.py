@@ -1621,6 +1621,7 @@ async def start(msg:types.Message ,state : FSMContext):
                     expiry_date_str = is_vip[0][0]
 
                     try:
+                         from datetime import datetime
                          expiry_date = datetime.strptime(expiry_date_str, "%Y-%m-%d %H:%M:%S")
                     except ValueError:
                          expiry_date = datetime.strptime(expiry_date_str, "%Y-%m-%d")
@@ -2099,6 +2100,7 @@ async def start(msg: types.Message, state: FSMContext):
 @dp.message_handler(state=[User.searching,User.anime_menu,User.watching])
 async def start(msg:types.Message ,state : FSMContext):
 
+
      data = await state.get_data()
      lang = data.get("lang")
      is_vip_user = data.get("vip")
@@ -2108,9 +2110,20 @@ async def start(msg:types.Message ,state : FSMContext):
 
      
      user_id = msg.from_user.id
+     print(text)
+     print(text != "🔙Ortga" or text!="📓 Animelar ro'yhati" or text!="📚Qo'llanma" or text!="💸Reklama va Homiylik" or text!="⚡️AniPass" or text!="🧧 Ongoing animelar" or text!="🤝 Hamkorlik dasturi")
 
-     if text != "🔙Ortga":
-
+     if text not in [
+    "🔙Ortga",
+    "📓 Animelar ro'yhati",
+    "📚Qo'llanma",
+    "💸Reklama va Homiylik",
+    "⚡️AniPass",
+    "🧧 Ongoing animelar",
+    "🤝 Hamkorlik dasturi"
+]:
+    # bu yerga shart bajarilganda bajarilishi kerak bo'lgan kod yoziladi
+          print(123456)
           anime = search_anime_base(text)
           
           if not anime:
@@ -2155,7 +2168,8 @@ async def start(msg:types.Message ,state : FSMContext):
                          
                     else:
                          await msg.answer(select_function_message(lang),reply_markup=admin_searched_animes_clbtn(anime))
-               
+
+
      else:
           await state.finish()
           await User.menu.set()

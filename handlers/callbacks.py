@@ -29,7 +29,6 @@ def vip_buying_clbtn():
 def which_vip_clbtn():
     cheker = InlineKeyboardMarkup()
     cheker.add(InlineKeyboardButton("⚡️AniPass",callback_data=f'which,vip'))
-    cheker.add(InlineKeyboardButton("🔙Chiqish",callback_data=f'back'))
     return cheker
 
 def vip_channel_clbtn():

@@ -5,8 +5,7 @@ import random
 import os 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # users_base.py joylashgan joy
-db_path = os.path.join(BASE_DIR, 'database.db')
-
+db_path = os.path.join(BASE_DIR,'database.db')
 conn = sqlite3.connect(db_path, timeout=10)
 cursor = conn.cursor()
 

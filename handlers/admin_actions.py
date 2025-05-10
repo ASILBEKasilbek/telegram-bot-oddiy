@@ -13,7 +13,7 @@ import os
 from aiogram.types import InputFile
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from config import BOT_NAME,BOT_TOKEN,insert_data
+from config import BOT_NAME,BOT_TOKEN,insert_data,POST_KANAL
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
@@ -56,6 +56,7 @@ class Hamkor(StatesGroup):
     kanal_nomi = State()
     add = State()
     bot1_username =State()
+    post_kanal = State()
 
 class Add_anime(StatesGroup):
     type = State()
@@ -243,7 +244,7 @@ async def select_series_for_post(call: types.CallbackQuery, state: FSMContext):
 
 logging.basicConfig(level=logging.INFO, filename='bot_setup.log')
 
-# Bot tokenini so'rash
+
 @dp.callback_query_handler(text="qaytish")
 async def bosqich_start(callback: types.CallbackQuery, state: FSMContext):
     await state.finish()
@@ -252,20 +253,17 @@ async def bosqich_start(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.answer("✅ Admin panelga qaytildi!")
 
 
-# Bot tokenini so'rash
 @dp.callback_query_handler(text="hamkor_qoshish")
 async def bosqich_start(call: types.CallbackQuery):
     await call.message.edit_text("1. Bot tokenini yuboring:")
     await Hamkor.token.set()
 
-# Bot tokenini qabul qilish
 @dp.message_handler(state=Hamkor.token)
 async def step1(msg: types.Message, state: FSMContext):
     await state.update_data(token=msg.text)
     await msg.answer("2. Reklama chiqariladigan kanal username yoki ID ni yuboring:")
     await Hamkor.reklama_kanal.set()
 
-# Reklama kanalini qabul qilish
 @dp.message_handler(state=Hamkor.reklama_kanal)
 async def step2(msg: types.Message, state: FSMContext):
     await state.update_data(reklama_kanal=msg.text)
@@ -279,7 +277,6 @@ async def step3(msg: types.Message, state: FSMContext):
     await msg.answer("4. Karta egasi ismini yuboring:")
     await Hamkor.karta_nomi.set()
 
-# Karta nomini qabul qilish
 @dp.message_handler(state=Hamkor.karta_nomi)
 async def step4(msg: types.Message, state: FSMContext):
     await state.update_data(karta_nomi=msg.text)
@@ -298,7 +295,15 @@ async def step5(msg: types.Message, state: FSMContext):
 async def step6(msg: types.Message, state: FSMContext):
     await state.update_data(bot_username=msg.text)
     await msg.answer("7. Kanal nomini yuboring:")
+    await Hamkor.post_kanal.set()
+
+
+@dp.message_handler(state=Hamkor.post_kanal)
+async def step6(msg: types.Message, state: FSMContext):
+    await state.update_data(post_kanal=msg.text)
+    await msg.answer("8. Post kanalni yuboring:")
     await Hamkor.kanal_nomi.set()
+
 
 # Kanal nomini qabul qilish va tasdiqlash tugmasini ko'rsatish
 @dp.message_handler(state=Hamkor.kanal_nomi)
@@ -320,6 +325,7 @@ async def save_and_create_bot(call: types.CallbackQuery, state: FSMContext):
     karta_raqam = data.get("karta_raqam")
     bot_username = data.get("bot_username")
     kanal_nomi = data.get("kanal_nomi")
+    post_kanal = data.get("post_kanal")
 
     # Ma'lumotlarni validatsiya qilish
     if not all([token, reklama_kanal, admin, karta_nomi, karta_raqam, bot_username, kanal_nomi]):
@@ -328,16 +334,21 @@ async def save_and_create_bot(call: types.CallbackQuery, state: FSMContext):
         return
 
     # Bazaga ma'lumotlarni saqlash
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    db_path = os.path.join(BASE_DIR, 'hamkor.db')
+    import os
+    # BASE_DIR ni root papkaga (AniDuble bot) o'rnatamiz
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # handlers -> AniDuble bot
+    print(BASE_DIR)
+
+    db_path = os.path.join(BASE_DIR, 'hamkor.db')  # hamkor.db root papkada
     print(db_path)
+
     try:
         with sqlite3.connect(db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO hamkor (token, reklama_kanal, admin, karta_nomi, karta_raqam, bot_username, kanal_nomi)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (token, reklama_kanal, admin, karta_nomi, karta_raqam, bot_username, kanal_nomi))
+                INSERT INTO hamkor (token, reklama_kanal, admin, karta_nomi, karta_raqam, bot_username, kanal_nomi, post_kanal)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (token, reklama_kanal, admin, karta_nomi, karta_raqam, bot_username, kanal_nomi, post_kanal))
             conn.commit()
             logging.info(f"Bot ma'lumotlari bazaga saqlandi: {bot_username}")
     except sqlite3.Error as e:
@@ -357,11 +368,10 @@ async def save_and_create_bot(call: types.CallbackQuery, state: FSMContext):
         await state.finish()
 
 async def create_bot_folder(BASE_DIR, bot_data):
-    from users_base import clear_users  # clear_users funksiyasini import qilish
-
+    from users_base import clear_users
     files_to_copy = [
         '.gitignore', 'handlers', 'media',
-        'bot.py', 'database.db', 'dispatcher.py', 'filters.py',
+        'bot.py', 'dispatcher.py', 'filters.py',
         'requirements.txt', 'throttling.py', 'users_base.py'
     ]
     target_root = os.path.join(BASE_DIR, 'Hamkorlik')
@@ -373,21 +383,26 @@ async def create_bot_folder(BASE_DIR, bot_data):
     os.makedirs(bot_folder, exist_ok=True)
     logging.info(f"Bot papkasi yaratildi: {bot_folder}")
 
-    # database.db faylini tozalash
-    db_path = os.path.join(BASE_DIR, 'database.db')
-    try:
-        clear_users()  # Foydalanuvchilarni o‘chirish
-    except Exception as e:
-        logging.error(f"database.db ni tozalashda xato: {e}")
-        raise
+    # database.db faylini Database papkasidan olish
+    print(BASE_DIR)
+
+    db_path = os.path.join(BASE_DIR, 'Database', 'database.db')
+    # if not os.path.exists(db_path):
+    #     logging.error(f"database.db fayli topilmadi: {db_path}")
+    #     raise FileNotFoundError(f"database.db fayli {db_path} da topilmadi!")
+    # try:
+    #     clear_users()  # clear_users() Database/database.db ni ishlatishi kerak
+    # except Exception as e:
+    #     logging.error(f"database.db ni tozalashda xato: {e}")
+    #     raise
 
     # Fayllarni nusxalash
     for item in files_to_copy:
         src = os.path.join(BASE_DIR, item)
         dst = os.path.join(bot_folder, item)
         if not os.path.exists(src):
-            logging.error(f"Manba fayl topilmadi: {src}")
-            raise FileNotFoundError(f"Muammo: {item} fayli topilmadi!")
+            logging.warning(f"Manba fayl topilmadi, o'tkazib yuborilmoqda: {src}")
+            continue
         if os.path.isdir(src):
             shutil.copytree(src, dst, dirs_exist_ok=True)
             logging.info(f"Direktoriya nusxalandi: {item}")
@@ -395,7 +410,11 @@ async def create_bot_folder(BASE_DIR, bot_data):
             shutil.copy2(src, dst)
             logging.info(f"Fayl nusxalandi: {item}")
 
-    # BOT_OWNERS ni parsing qilish
+    # database.db faylini Database papkasidan nusxalash
+    db_dst = os.path.join(bot_folder, 'database.db')
+    shutil.copy2(db_path, db_dst)
+    logging.info(f"Fayl nusxalandi: database.db")
+
     try:
         bot_owners = ast.literal_eval(BOT_OWNERS)
         if not isinstance(bot_owners, list):
@@ -412,7 +431,7 @@ KARTA_NOMI = "{bot_data['karta_nomi']}"
 KARTA_RAQAM = "{bot_data['karta_raqam']}"
 ANIDUBLE = "{bot_data['bot_username']}"
 BOT_NAME = "{bot_data['kanal_nomi']}"
-BOT_OWNERS = {repr(bot_owners)}
+BOT_OWNERS ="{[5306481482]}"
 '''
     config_path = os.path.join(bot_folder, 'config.py')
     try:
@@ -422,8 +441,6 @@ BOT_OWNERS = {repr(bot_owners)}
     except OSError as e:
         logging.error(f"config.py yozish xatosi: {e}")
         raise
-
-
 @dp.callback_query_handler(text="hamkor_list")
 async def show_hamkor_list(call: types.CallbackQuery):
     conn = sqlite3.connect("hamkor.db")
@@ -620,13 +637,13 @@ async def start(msg:types.Message ,state : FSMContext):
             await Admin.menu.set()
         else:
             await msg.answer("""<b>❌️ Ushbu funksya sizda faollashtrilmagan faollashtrish uchun @Aniduble_admin ga yozing</b>""",parse_mode="HTML")
-    elif text == "🤝🏻 Hamkorlik dasturi":
-        if ANIDUBLE == "@ANIDUBLE_RASMIY_BOT":
-            await state.finish()
-            await msg.answer("Tanlang:",reply_markup=hamkor_btn())
+    # elif text == "🤝🏻 Hamkorlik dasturi":
+    #     if ANIDUBLE == "@ANIDUBLE_RASMIY_BOT":
+    #         await state.finish()
+    #         await msg.answer("Tanlang:",reply_markup=hamkor_btn())
 
-        else:
-            await msg.answer("""<b>❌️ Ushbu funksya sizda faollashtrilmagan faollashtrish uchun @Aniduble_admin ga yozing</b>""",parse_mode="HTML")
+    #     else:
+    #         await msg.answer("""<b>❌️ Ushbu funksya sizda faollashtrilmagan faollashtrish uchun @Aniduble_admin ga yozing</b>""",parse_mode="HTML")
     elif text == "🚀 Qismli post":
     
         if ANIDUBLE == "@ANIDUBLE_RASMIY_BOT":
@@ -1231,7 +1248,7 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
 """
 
         photo = InputFile("handlers/post_media/output.jpg")
-        await dp.bot.send_photo(chat_id=-1002023259288,photo=photo,caption=caption,reply_markup=serie_post_link_clbtn(anime_id))
+        await dp.bot.send_photo(chat_id=POST_KANAL,photo=photo,caption=caption,reply_markup=serie_post_link_clbtn(anime_id))
         os.remove("handlers/post_media/output.jpg")
 
         await a.delete()
@@ -1291,7 +1308,7 @@ async def qosh(call: types.CallbackQuery,state : FSMContext):
 """ 
         
 
-        a = await dp.bot.send_video(chat_id=-1002023259288,video=open(f"post_{call.from_user.id}/video.mp4","rb"),caption=text,reply_markup=post_watching_clbtn(anime[0][0],anime_list))
+        a = await dp.bot.send_video(chat_id=POST_KANAL,video=open(f"post_{call.from_user.id}/video.mp4","rb"),caption=text,reply_markup=post_watching_clbtn(anime[0][0],anime_list))
         message_id = a.message_id
         await call.message.delete()
         await state.finish()

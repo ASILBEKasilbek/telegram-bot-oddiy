@@ -1,0 +1,37 @@
+# Python asosiy fayllari
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.log
+
+# Ma'lumotlar bazasi fayllari
+database.db
+*.sqlite3
+*.db
+*.db-journal
+*.sqlite
+*.sqlite-journal
+
+# Virtual environment
+venv/
+env/
+*.venv
+
+# Konfiguratsiya va maxfiy ma'lumotlar
+.env
+config.json
+settings.py
+secrets.json
+
+# IDE va tahrirlovchilar uchun
+.vscode/
+.idea/
+*.swp
+*.swo
+Baza/
+
+# Linux va MacOS uchun
+.DS_Store
+myenv
+keraksizlar/
