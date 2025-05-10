@@ -364,122 +364,223 @@ async def back_to_main_menu(callback_query: types.CallbackQuery, state: FSMConte
     logging.info(f"User {user_id} returned to main menu")
 
 # Start komandasi
-@dp.message_handler(commands="start", state="*")
-async def start(msg: types.Message, state: FSMContext):
-    if str(msg.chat.id)[0] == "-":
-        return
+@dp.message_handler(commands="start",state="*")
+async def start(msg:types.Message ,state : FSMContext):
 
-    user_id = msg.from_user.id
-    user = get_user_base(user_id)
-    lang = user[0][2] if user and len(user) > 0 and len(user[0]) > 2 else "uz"
+     if str(msg.chat.id)[0] == "-":
+          pass
+     else:
+          user_id = msg.from_user.id
+          user = get_user_base(user_id)
+          if not user:
+               
+               username = msg.from_user.username
+               
+               if username != None:
+                    user_name = f"@{msg.from_user.username}"
+               else:
+                    user_name = "None"
+                    
+               await User.language.set()
+               
+               async with state.proxy() as data:
+                    data["username"] = user_name
+                    
+               text = """
+Tilini tanlang :
+"""
+               await msg.answer(text=text,reply_markup=choose_language_clbtn())
+          else:
+               lang = user[0][2]
 
-    is_sub = await sponsor_checking_func(msg, lang)
-    if not is_sub:
-        return
+               is_vip = await check_premium_func(user_id)
+               async with state.proxy() as data:
+                    data["lang"] = lang
+                    data["vip"] = is_vip
 
-    if not user:
-        username = msg.from_user.username
-        user_name = f"@{username}" if username else "None"
-        await User.language.set()
-        async with state.proxy() as data:
-            data["username"] = user_name
-        text = "Tilni tanlang:"
-        await msg.answer(text=text, reply_markup=choose_language_clbtn())
-        logging.info(f"New user {user_id} prompted to choose language")
-    else:
-        is_vip = await check_premium_func(user_id)
-        async with state.proxy() as data:
-            data["lang"] = lang
-            data["vip"] = is_vip
+               try:
+                    
+                    try:
+                         is_sub = await sponsor_cheking_func(msg,lang)
 
-        try:
-            start = msg.text.replace("/start ", "")
-            if "serie" in start:
-                serie_post_id = int(start.split("serie")[0])
-                anime = get_anime_base(serie_post_id)
-                if anime:
-                    a = await msg.answer(anime_found_message(lang), reply_markup=back_button_btn())
-                    await a.delete()
-                    serie = get_series_base(serie_post_id)[-1]
-                    serie_id = int(serie[1])
-                    serie_num = int(serie[2])
-                    serie_quality = serie[3]
-                    which_anime = int(serie[0])
-                    page = serie_num // 21
-                    series = get_anime_series_base(which_anime)
-                    is_vip_anime = anime[0][10]
-                    next_states = True
+                         if is_sub == True:
 
-                    if is_vip_anime == "vip" and is_vip == "False":
-                        await state.finish()
-                        await User.menu.set()
-                        async with state.proxy() as data:
-                            data["lang"] = lang
-                            data["vip"] = is_vip
-                        await msg.answer("‼️Ushbu animeni tomosha qilish uchun ⚡️AniPass sotib olishingiz kerak!", reply_markup=user_button_btn(lang))
-                        return
+                              start = msg.text.replace("/start ","")
+                              serie_post_id = int(start.split("serie")[0])
+                              str(start.split("serie")[1])
+                              anime = get_anime_base(serie_post_id)
 
-                    protect = is_vip_anime == "True"
-                    await User.watching.set()
-                    a = await dp.bot.forward_message(chat_id=user_id, message_id=serie_id, from_chat_id=anime_series_chat, protect_content=protect)
-                    async with state.proxy() as data:
-                        data["lang"] = lang
-                        data["serie"] = a.message_id
-                    await msg.answer(anime_serie_message(lang, serie_num, serie_quality), reply_markup=anime_series_clbtn(serie_num, series, page))
-                else:
+                              if anime:
+                                   a = await msg.answer(anime_found_message(lang),reply_markup=back_button_btn())
+                                   await a.delete()
+
+                                   serie = get_series_base(serie_post_id)[-1]
+                                             
+                                   serie_id = int(serie[1])
+                                   serie_num = int(serie[2])
+                                   serie_quality = serie[3]
+                                   which_anime = int(serie[0])
+                                   page = serie_num // 21
+
+                                   next_states = True
+
+                                   series = get_anime_series_base(which_anime)
+
+                                   is_vip_anime = anime[0][10]
+
+                                   if is_vip_anime == "vip":
+                                        if is_vip_user == "True":
+                                             next_states = True
+                                        else:
+                                             await state.finish()
+                                             await User.menu.set()
+
+                                             async with state.proxy() as data:
+                                                  data["lang"] = lang
+                                                  data["vip"] = is_vip
+
+                                             await msg.answer("‼️Ushbu animeni tomosha qilish uchun ⚡️AniPass sotib olishingiz kerak !",reply_markup=user_button_btn(lang))
+                                             next_states = False
+
+                                   if is_vip_anime == "True":
+                                        protect = True
+                                   else:
+                                        protect = False     
+                                   
+                                   if next_states == True:
+                                        await User.watching.set()
+                                        
+                                        a = await dp.bot.forward_message(chat_id=user_id,message_id=serie_id,from_chat_id=anime_series_chat,protect_content=protect)
+
+                                        async with state.proxy() as data:
+                                             data["lang"] = lang
+                                             data["serie"] = a.message_id
+
+                                        await msg.answer(anime_serie_message(lang,serie_num,serie_quality),reply_markup=anime_series_clbtn(serie_num,series,page))
+                              else:
+                                   username = msg.from_user.username
+               
+                                   if username != None:
+                                        user_name = f"@{msg.from_user.username}"
+                                   else:
+                                        user_name = "None"
+                                   await state.finish()
+                                   await User.menu.set()
+                                   try:
+                                        update_user_username_base(msg.from_user.id,username)
+                                   except:
+                                        pass
+
+                                   async with state.proxy() as data:
+                                        data["lang"] = lang
+                                   caption_text = f"""<b>
+✨ Salom! {msg.from_user.username} Men — {BOT_NAME}!
+🎌 O'zbek tilida dublyaj qilingan animelar olamiga hush kelibsiz!
+...
+</b>"""
+                                   with open("media/aniduble.jpg", "rb") as photo:
+                                        await msg.answer_photo(
+                                        photo=photo,
+                                        caption=caption_text,
+                                        reply_markup=user_button_btn(lang, is_vip),
+                                        parse_mode="HTML"
+                                        )
+                    
+                    except:
+
+                         content_id = msg.text.replace("/start ","")
+                         
+                         is_sub = await sponsor_cheking_func(msg,lang)
+
+                         content_id = int(content_id)
+                         if is_sub == True:
+                              anime = get_anime_base(content_id)
+                              if anime:
+                                   await msg.answer(anime_found_message(lang))
+                                             
+                                   have_serie = False
+                                   if anime[0][8] > 0:
+                                        have_serie = True
+
+                                   trailer_id = anime[0][2]
+                                   anime_id = anime[0][0]
+                                   is_vip = anime[0][10]
+
+                                   await msg.delete()
+
+                                   is_vip_user = await check_premium_func(user_id)
+
+                                   trailer = await dp.bot.forward_message(message_id=trailer_id,chat_id=user_id,from_chat_id=anime_treller_chat)
+                                   async with state.proxy() as data:
+                                        data["trailer"] = trailer.message_id
+                                        data["have_serie"] = have_serie
+                                        data["lang"] = lang
+                                        data["vip"] = is_vip_user
+
+                                   await User.anime_menu.set()
+                                   await msg.answer(anime_menu_message(lang,anime),reply_markup=anime_menu_clbtn(lang,anime_id,False,have_serie,is_vip))
+                              else:
+                                   username = msg.from_user.username
+               
+                                   if username != None:
+                                        user_name = f"@{msg.from_user.username}"
+                                   else:
+                                        user_name = "None"
+                                   await state.finish()
+                                   await User.menu.set()
+                                   try:
+                                        update_user_username_base(msg.from_user.id,username)
+                                   except:
+                                        pass
+                                   async with state.proxy() as data:
+                                        data["lang"] = lang
+                                   
+                                   async with state.proxy() as data:
+                                        data["lang"] = lang
+                                   caption_text = f"""<b>
+✨ Salom! {msg.from_user.username} Men — {BOT_NAME}!
+🎌 O'zbek tilida dublyaj qilingan animelar olamiga hush kelibsiz!
+...
+</b>"""
+                                   with open("media/aniduble.jpg", "rb") as photo:
+                                        await msg.answer_photo(
+                                        photo=photo,
+                                        caption=caption_text,
+                                        reply_markup=user_button_btn(lang, is_vip),
+                                        parse_mode="HTML"
+                                        )
+                    
+               except:
+                    username = msg.from_user.username
+               
+                    if username != None:
+                         user_name = f"@{msg.from_user.username}"
+                    else:
+                         user_name = "None"
                     await state.finish()
                     await User.menu.set()
+                    try:
+                         update_user_username_base(msg.from_user.id,username)
+                    except:
+                         pass
                     async with state.proxy() as data:
-                        data["lang"] = lang
-                    caption_text = f"""<b>
+                         data["lang"] = lang
+                         
+                    async with state.proxy() as data:
+                         data["lang"] = lang
+                         caption_text = f"""<b>
 ✨ Salom! {msg.from_user.username} Men — {BOT_NAME}!
 🎌 O'zbek tilida dublyaj qilingan animelar olamiga hush kelibsiz!
 ...
 </b>"""
                     with open("media/aniduble.jpg", "rb") as photo:
-                        await msg.answer_photo(
-                            photo=photo,
-                            caption=caption_text,
-                            reply_markup=user_button_btn(lang, is_vip),
-                            parse_mode="HTML"
-                        )
-            else:
-                await state.finish()
-                await User.menu.set()
-                async with state.proxy() as data:
-                    data["lang"] = lang
-                caption_text = f"""<b>
-✨ Salom! {msg.from_user.username} Men — {BOT_NAME}!
-🎌 O'zbek tilida dublyaj qilingan animelar olamiga hush kelibsiz!
-...
-</b>"""
-                with open("media/aniduble.jpg", "rb") as photo:
-                    await msg.answer_photo(
-                        photo=photo,
-                        caption=caption_text,
-                        reply_markup=user_button_btn(lang, is_vip),
-                        parse_mode="HTML"
-                    )
-        except Exception as e:
-            logging.error(f"Start command error for user {user_id}: {e}")
-            await state.finish()
-            await User.menu.set()
-            async with state.proxy() as data:
-                data["lang"] = lang
-            caption_text = f"""<b>
-✨ Salom! {msg.from_user.username} Men — {BOT_NAME}!
-🎌 O'zbek tilida dublyaj qilingan animelar olamiga hush kelibsiz!
-...
-</b>"""
-            with open("media/aniduble.jpg", "rb") as photo:
-                await msg.answer_photo(
-                    photo=photo,
-                    caption=caption_text,
-                    reply_markup=user_button_btn(lang, is_vip),
-                    parse_mode="HTML"
-                )
-
-
+                         await msg.answer_photo(
+                         photo=photo,
+                         caption=caption_text,
+                         reply_markup=user_button_btn(lang, is_vip),
+                         parse_mode="HTML"
+                         )
+     
 
 
 
@@ -1433,6 +1534,7 @@ async def sponsor_cheking_func(msg,lang):
 async def check_premium_func(user_id):
      user = get_user_base(user_id)
      print(user)
+     print(user[0][5],user[0])
      vip = user[0][5]
 
      lux = user[0][6]
