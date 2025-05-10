@@ -1409,6 +1409,7 @@ import logging
 import sqlite3
 import datetime
 import asyncio
+import re
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
@@ -1429,6 +1430,7 @@ class ChannelManagement(StatesGroup):
     remove_post_channel = State()
     view_channel_stats = State()
 
+
 # Bazada kanallar jadvallarini yaratish
 def create_channels_tables():
     try:
@@ -1437,10 +1439,11 @@ def create_channels_tables():
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS mandatory_channels (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    channel_username TEXT NOT NULL UNIQUE,
-                    channel_link TEXT,
+                    channel_username TEXT UNIQUE,
+                    channel_link TEXT NOT NULL UNIQUE,
                     channel_name TEXT NOT NULL,
                     channel_type TEXT NOT NULL,
+                    channel_platform TEXT NOT NULL DEFAULT 'telegram',
                     expire_date TEXT,
                     subscribers_count INTEGER DEFAULT 0,
                     added_date TEXT NOT NULL
@@ -1465,9 +1468,13 @@ def migrate_mandatory_channels():
     try:
         with sqlite3.connect("hamkor.db") as conn:
             cursor = conn.cursor()
-            # Check if the old table structure exists
+            # Check if channel_platform column exists
             cursor.execute("PRAGMA table_info(mandatory_channels)")
             columns = [col[1] for col in cursor.fetchall()]
+            if "channel_platform" not in columns:
+                cursor.execute("ALTER TABLE mandatory_channels ADD COLUMN channel_platform TEXT NOT NULL DEFAULT 'telegram'")
+                conn.commit()
+                logging.info("Added channel_platform column to mandatory_channels.")
             if "channel_link" in columns and "channel_username" not in columns:
                 # Rename the existing table
                 cursor.execute("ALTER TABLE mandatory_channels RENAME TO mandatory_channels_old")
@@ -1475,10 +1482,11 @@ def migrate_mandatory_channels():
                 cursor.execute("""
                     CREATE TABLE mandatory_channels (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        channel_username TEXT NOT NULL UNIQUE,
-                        channel_link TEXT,
+                        channel_username TEXT UNIQUE,
+                        channel_link TEXT NOT NULL UNIQUE,
                         channel_name TEXT NOT NULL,
                         channel_type TEXT NOT NULL,
+                        channel_platform TEXT NOT NULL DEFAULT 'telegram',
                         expire_date TEXT,
                         subscribers_count INTEGER DEFAULT 0,
                         added_date TEXT NOT NULL
@@ -1486,8 +1494,8 @@ def migrate_mandatory_channels():
                 """)
                 # Migrate data
                 cursor.execute("""
-                    INSERT INTO mandatory_channels (id, channel_username, channel_link, channel_name, channel_type, expire_date, subscribers_count, added_date)
-                    SELECT id, channel_link, channel_link, channel_name, channel_type, expire_date, subscribers_count, added_date
+                    INSERT INTO mandatory_channels (id, channel_username, channel_link, channel_name, channel_type, channel_platform, expire_date, subscribers_count, added_date)
+                    SELECT id, channel_link, channel_link, channel_name, channel_type, 'telegram', expire_date, subscribers_count, added_date
                     FROM mandatory_channels_old
                 """)
                 # Drop the old table
@@ -1502,22 +1510,43 @@ create_channels_tables()
 migrate_mandatory_channels()
 
 # Kanal linkini validatsiya qilish
-async def validate_channel_link(bot, channel_link: str) -> bool:
-    if not (channel_link.startswith("@") or channel_link.startswith("https://t.me/")):
-        return False
-    try:
-        chat = await bot.get_chat(channel_link)
-        return chat.type in ["channel", "supergroup"]
-    except Exception as e:
-        logging.error(f"Kanal linkini tekshirishda xato: {e}")
+async def validate_channel_link(bot, channel_link: str, platform: str = 'telegram') -> bool:
+    if platform == 'telegram':
+        if not (channel_link.startswith("@") or channel_link.startswith("https://t.me/")):
+            logging.error(f"Invalid Telegram link format: {channel_link}")
+            return False
+        try:
+            chat = await bot.get_chat(channel_link)
+            logging.info(f"Successfully validated Telegram channel: {channel_link}, type: {chat.type}")
+            return chat.type in ["channel", "supergroup"]
+        except Exception as e:
+            if "Chat not found" in str(e):
+                logging.error(f"Chat not found for {channel_link}. Bot may not be a member of the channel.")
+            else:
+                logging.error(f"Error validating Telegram channel link {channel_link}: {e}")
+            return False
+    elif platform == 'instagram':
+        # Basic Instagram URL validation
+        instagram_pattern = r'^(https?:\/\/)?(www\.)?instagram\.com\/[A-Za-z0-9._-]+\/?$'
+        if not re.match(instagram_pattern, channel_link):
+            logging.error(f"Invalid Instagram link format: {channel_link}")
+            return False
+        logging.info(f"Validated Instagram link: {channel_link}")
+        return True
+    else:
+        logging.error(f"Unsupported platform: {platform}")
         return False
 
 # Kanal linkini to‘g‘ri URL formatiga o‘tkazish
-def format_channel_url(channel_link: str) -> str:
-    if channel_link.startswith("https://t.me/"):
-        return channel_link
-    elif channel_link.startswith("@"):
-        return f"https://t.me/{channel_link.lstrip('@')}"
+def format_channel_url(channel_link: str, platform: str = 'telegram') -> str:
+    if platform == 'telegram':
+        if channel_link.startswith("https://t.me/"):
+            return channel_link
+        elif channel_link.startswith("@"):
+            return f"https://t.me/{channel_link.lstrip('@')}"
+    elif platform == 'instagram':
+        if not channel_link.startswith("https://"):
+            return f"https://{channel_link.lstrip('www.')}"
     return channel_link
 
 # Majburiy kanallar ro'yxatini olish
@@ -1525,7 +1554,7 @@ def get_mandatory_channels() -> List[Tuple]:
     try:
         with sqlite3.connect("hamkor.db") as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT id, channel_username, channel_link, channel_name, channel_type, expire_date, subscribers_count, added_date FROM mandatory_channels")
+            cursor.execute("SELECT id, channel_username, channel_link, channel_name, channel_type, channel_platform, expire_date, subscribers_count, added_date FROM mandatory_channels")
             return cursor.fetchall()
     except sqlite3.Error as e:
         logging.error(f"Majburiy kanallarni olishda xato: {e}")
@@ -1569,9 +1598,11 @@ async def process_channel_management(call: types.CallbackQuery, state: FSMContex
             markup.add(
                 InlineKeyboardButton("📢 Post qilish uchun kanal", callback_data="manage_post_channels"),
                 InlineKeyboardButton("🔐 Majburiy a'zo uchun kanal", callback_data="manage_mandatory_channels"),
-                InlineKeyboardButton("🔙 Ortga", callback_data="back")
+                InlineKeyboardButton("🔙 Ortga", callback_data="back_to_admin_menu")
             )
-            await call.message.edit_text("🔐 Kanal boshqaruvi:", reply_markup=markup)
+            new_text = "🔐 Kanal boshqaruvi:"
+            if call.message.text != new_text or call.message.reply_markup != markup:
+                await call.message.edit_text(new_text, reply_markup=markup)
             logging.info(f"User {call.from_user.id} returned to main menu")
             return
 
@@ -1595,13 +1626,13 @@ async def process_channel_management(call: types.CallbackQuery, state: FSMContex
                     return
 
                 for channel in channels:
-                    channel_id, channel_username, channel_link, channel_name, channel_type, expire_date, subscribers_count, added_date = channel
-                    display_text = f"{channel_name}"
-                    channel_url = channel_link if channel_link else channel_username
+                    channel_id, channel_username, channel_link, channel_name, channel_type, channel_platform, expire_date, subscribers_count, added_date = channel
+                    display_text = f"{channel_name} ({channel_platform})"
+                    channel_url = channel_link
                     expire_info = f" (Muddat: {expire_date})" if expire_date else ""
                     try:
                         markup.row(
-                            InlineKeyboardButton(f"{display_text}{expire_info}", url=format_channel_url(channel_url)),
+                            InlineKeyboardButton(f"{display_text}{expire_info}", url=format_channel_url(channel_url, channel_platform)),
                             InlineKeyboardButton(f"👥 {subscribers_count}", callback_data="view_channel_stats"),
                             InlineKeyboardButton("🗑", callback_data=f"remove_channel_{channel_id}")
                         )
@@ -1652,15 +1683,14 @@ async def process_channel_management(call: types.CallbackQuery, state: FSMContex
         if not management_type:
             await state.finish()
             await Admin.menu.set()
-            await call.message.edit_text(
-                "✅ Admin panelga qaytildi!"
-            )
+            await call.message.edit_text("✅ Admin panelga qaytildi!", reply_markup=get_admin_inline_button())
+            return
 
         if call.data == "add_channel":
             if management_type == "manage_mandatory_channels":
                 await ChannelManagement.add_mandatory_channel.set()
                 await call.message.edit_text(
-                    "➕ Qo'shmoqchi bo'lgan kanal ma'lumotlarini yuboring (masalan, @ChannelName [https://t.me/ChannelName] [oddiy/yopiq/zayafkali 7 kun]):",
+                    "➕ Qo'shmoqchi bo'lgan kanal ma'lumotlarini yuboring (masalan, @ChannelName yoki https://t.me/ChannelName yoki https://t.me/+hash yoki https://www.instagram.com/username [oddiy/yopiq/zayafkali 7 kun]):",
                     reply_markup=get_back_button()
                 )
                 logging.info(f"User {call.from_user.id} entered add_mandatory_channel state")
@@ -1718,12 +1748,13 @@ async def process_channel_management(call: types.CallbackQuery, state: FSMContex
                     logging.info(f"User {call.from_user.id} viewed empty mandatory channels list")
                     return
                 for channel in channels:
-                    channel_id, channel_username, channel_link, channel_name, channel_type, expire_date, subscribers_count, added_date = channel
-                    channel_url = channel_link if channel_link else channel_username
+                    channel_id, channel_username, channel_link, channel_name, channel_type, channel_platform, expire_date, subscribers_count, added_date = channel
+                    display_text = f"{channel_name} ({channel_platform})"
+                    channel_url = channel_link
                     expire_info = f" (Muddat: {expire_date})" if expire_date else ""
                     try:
                         markup.row(
-                            InlineKeyboardButton(f"{channel_name}{expire_info}", url=format_channel_url(channel_url)),
+                            InlineKeyboardButton(f"{display_text}{expire_info}", url=format_channel_url(channel_url, channel_platform)),
                             InlineKeyboardButton(f"👥 {subscribers_count}", callback_data="view_channel_stats"),
                             InlineKeyboardButton("🗑", callback_data=f"remove_channel_{channel_id}")
                         )
@@ -1784,12 +1815,13 @@ async def process_channel_management(call: types.CallbackQuery, state: FSMContex
                     logging.info(f"User {call.from_user.id} viewed empty mandatory channels stats")
                     return
                 for channel in channels:
-                    channel_id, channel_username, channel_link, channel_name, channel_type, expire_date, subscribers_count, added_date = channel
-                    channel_url = channel_link if channel_link else channel_username
+                    channel_id, channel_username, channel_link, channel_name, channel_type, channel_platform, expire_date, subscribers_count, added_date = channel
+                    display_text = f"{channel_name} ({channel_platform})"
+                    channel_url = channel_link
                     expire_info = f" (Muddat: {expire_date})" if expire_date else ""
                     try:
                         markup.row(
-                            InlineKeyboardButton(f"{channel_name}{expire_info}", url=format_channel_url(channel_url)),
+                            InlineKeyboardButton(f"{display_text}{expire_info}", url=format_channel_url(channel_url, channel_platform)),
                             InlineKeyboardButton(f"👥 {subscribers_count}", callback_data="view_channel_stats"),
                             InlineKeyboardButton("🗑", callback_data=f"remove_channel_{channel_id}")
                         )
@@ -1835,19 +1867,29 @@ async def process_channel_management(call: types.CallbackQuery, state: FSMContex
                 await call.message.edit_text(text, parse_mode="HTML", reply_markup=get_back_button())
                 logging.info(f"User {call.from_user.id} viewed post channels stats")
 
+        elif call.data == "back_to_admin_menu":
+            await state.finish()
+            await Admin.menu.set()
+            new_text = "✅ Admin panelga qaytildi!"
+            markup = get_admin_inline_button()
+            if call.message.text != new_text or call.message.reply_markup != markup:
+                await call.message.edit_text(new_text, reply_markup=markup)
+            logging.info(f"User {call.from_user.id} returned to admin menu")
+
         else:
             await state.finish()
             await Admin.menu.set()
-            await call.message.edit_text(
-                "✅ Admin panelga qaytildi!"
-            )
+            new_text = "✅ Admin panelga qaytildi!"
+            markup = get_admin_inline_button()
+            if call.message.text != new_text or call.message.reply_markup != markup:
+                await call.message.edit_text(new_text, reply_markup=markup)
+            logging.info(f"User {call.from_user.id} returned to admin menu")
+
     except Exception as e:
         logging.error(f"Error in process_channel_management: {e}")
         await state.finish()
         await Admin.menu.set()
-        await call.message.edit_text(
-            "✅ Admin panelga qaytildi!"
-        )
+        await call.message.edit_text("✅ Admin panelga qaytildi!", reply_markup=get_admin_inline_button())
 
 # Majburiy a'zolik kanalini qo'shish
 @dp.message_handler(content_types=["text"], state=ChannelManagement.add_mandatory_channel)
@@ -1857,41 +1899,73 @@ async def add_mandatory_channel(msg: types.Message, state: FSMContext):
     
     if not parts:
         await msg.answer(
-            "❌ Kanal ma'lumotlarini kiriting! Masalan: @ChannelName [link] [oddiy/yopiq/zayafkali 7 kun]",
+            "❌ Kanal ma'lumotlarini kiriting! Masalan: @ChannelName yoki https://t.me/ChannelName yoki https://t.me/+hash yoki https://www.instagram.com/username [oddiy/yopiq/zayafkali 7 kun]",
             reply_markup=get_back_button()
         )
         logging.error("Empty input for add_mandatory_channel")
         return
 
-    channel_username = parts[0]
-    channel_link = None
+    channel_username = None
+    channel_link = parts[0]
     channel_type = "oddiy"
     expire_date = None
+    platform = 'telegram'
 
-    # Check if a link is provided
-    if len(parts) > 1 and parts[1].startswith("https://t.me/"):
-        channel_link = parts[1]
-        parts = parts[2:]  # Shift parts to process type and duration
+    # Determine platform and parse input
+    if channel_link.startswith("https://www.instagram.com/") or channel_link.startswith("www.instagram.com/"):
+        platform = 'instagram'
+        parts = parts[1:]  # Shift parts to process type and duration
+    elif channel_link.startswith("@"):
+        channel_username = channel_link
+        if len(parts) > 1 and parts[1].startswith("https://t.me/"):
+            channel_link = parts[1]
+            parts = parts[2:]  # Shift parts to process type and duration
+        else:
+            parts = parts[1:]  # No link provided, process type and duration
+    elif channel_link.startswith("https://t.me/"):
+        parts = parts[1:]  # Link provided, process type and duration
     else:
-        parts = parts[1:]  # No link provided, process type and duration
-
-    # Validate channel username
-    if not await validate_channel_link(msg.bot, channel_username):
         await msg.answer(
-            "❌ Noto'g'ri kanal username formati yoki kanal mavjud emas! Iltimos, @ChannelName shaklida yuboring.",
+            "❌ Noto'g'ri format! Iltimos, @ChannelName, https://t.me/ChannelName, https://t.me/+hash yoki https://www.instagram.com/username shaklida yuboring.",
+            reply_markup=get_back_button()
+        )
+        logging.error(f"Invalid channel format: {channel_link}")
+        return
+
+    # Validate channel link
+    if not await validate_channel_link(msg.bot, channel_link, platform):
+        if platform == 'telegram':
+            error_message = (
+                f"❌ Kanal mavjud emas yoki bot kanalda a'zo emas! "
+                f"Agar kanal xususiy bo'lsa, iltimos, botni (@{BOT_NAME}) kanalga qo'shing (kanal sozlamalaridan a'zo sifatida qo'shing yoki taklif linki orqali). "
+                "Keyin qayta urinib ko'ring. Yoki to'g'ri Telegram linkini yuboring (masalan, https://t.me/ChannelName yoki https://t.me/+hash)."
+            )
+        else:
+            error_message = (
+                "❌ Noto'g'ri Instagram linki! "
+                "Iltimos, to'g'ri Instagram profil linkini yuboring (masalan, https://www.instagram.com/username)."
+            )
+        await msg.answer(error_message, reply_markup=get_back_button())
+        logging.error(f"Invalid channel link: {channel_link} for platform {platform}")
+        return
+
+    # Validate channel username if provided (Telegram only)
+    if channel_username and platform == 'telegram' and not await validate_channel_link(msg.bot, channel_username, platform):
+        await msg.answer(
+            "❌ Noto'g'ri Telegram kanal username formati yoki kanal mavjud emas! Iltimos, @ChannelName shaklida yuboring.",
             reply_markup=get_back_button()
         )
         logging.error(f"Invalid channel username: {channel_username}")
         return
 
-    # Validate channel link if provided
-    if channel_link and not await validate_channel_link(msg.bot, channel_link):
-        await msg.answer(
-            "❌ Noto'g'ri kanal linki yoki kanal mavjud emas! Iltimos, https://t.me/ChannelName shaklida yuboring.",
-            reply_markup=get_back_button()
-        )
-        logging.error(f"Invalid channel link: {channel_link}")
-        return
+    # Try to fetch username for Telegram links if not provided
+    if not channel_username and platform == 'telegram':
+        try:
+            chat = await msg.bot.get_chat(channel_link)
+            channel_username = chat.username if chat.username else None
+            logging.info(f"Fetched username for {channel_link}: {channel_username}")
+        except Exception as e:
+            logging.warning(f"Could not fetch username for {channel_link}: {e}")
 
     # Parse channel type and expiration
     if parts:
@@ -1904,14 +1978,17 @@ async def add_mandatory_channel(msg: types.Message, state: FSMContext):
                 expire_date = (datetime.datetime.now() + datetime.timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
             except (IndexError, ValueError):
                 await msg.answer(
-                    "❌ Zayafkali kanal uchun muddatni kunlarda kiriting (masalan: @ChannelName zayafkali 7)",
+                    "❌ Zayafkali kanal uchun muddatni kunlarda kiriting (masalan: @ChannelName zayafkali 7 yoki https://www.instagram.com/username zayafkali 7)",
                     reply_markup=get_back_button()
                 )
                 logging.error(f"Invalid zayafkali duration: {input_text}")
                 return
 
-    # Get channel name from username
-    channel_name = channel_username.lstrip("@")
+    # Get channel name
+    if platform == 'telegram':
+        channel_name = channel_username.lstrip("@") if channel_username else channel_link.split("/")[-1]
+    else:
+        channel_name = channel_link.split("/")[-1].rstrip("/")
 
     try:
         with sqlite3.connect("hamkor.db") as conn:
@@ -1919,14 +1996,15 @@ async def add_mandatory_channel(msg: types.Message, state: FSMContext):
             cursor.execute(
                 """
                 INSERT OR IGNORE INTO mandatory_channels 
-                (channel_username, channel_link, channel_name, channel_type, expireFiftyOneYearsFromNow_date, added_date) 
-                VALUES (?, ?, ?, ?, ?, ?)
+                (channel_username, channel_link, channel_name, channel_type, channel_platform, expire_date, added_date) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     channel_username,
                     channel_link,
                     channel_name,
                     channel_type,
+                    platform,
                     expire_date,
                     datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 )
@@ -1936,16 +2014,16 @@ async def add_mandatory_channel(msg: types.Message, state: FSMContext):
 
         if affected:
             await msg.answer(
-                f"✅ Kanal ({channel_username}{f', {channel_link}' if channel_link else ''}) majburiy a'zolik ro'yxatiga qo'shildi!",
+                f"✅ {platform.capitalize()} kanal ({channel_link}{f', {channel_username}' if channel_username else ''}) majburiy a'zolik ro'yxatiga qo'shildi!",
                 reply_markup=get_admin_inline_button()
             )
-            logging.info(f"Channel added to mandatory_channels: {channel_username}, link: {channel_link}")
+            logging.info(f"Channel added to mandatory_channels: {channel_link}, username: {channel_username}, platform: {platform}")
         else:
             await msg.answer(
-                "⚠️ Bu kanal allaqachon ro'yxatda mavjud!",
+                f"⚠️ Bu {platform} kanal allaqachon ro'yxatda mavjud!",
                 reply_markup=get_admin_inline_button()
             )
-            logging.info(f"Channel already exists in mandatory_channels: {channel_username}")
+            logging.info(f"Channel already exists in mandatory_channels: {channel_link}, platform: {platform}")
         
         await state.finish()
         await Admin.menu.set()
@@ -1961,20 +2039,20 @@ async def add_mandatory_channel(msg: types.Message, state: FSMContext):
 # Majburiy a'zolik kanalini o'chirish
 @dp.message_handler(content_types=["text"], state=ChannelManagement.remove_mandatory_channel)
 async def remove_mandatory_channel(msg: types.Message, state: FSMContext):
-    channel_username = msg.text.strip()
+    channel_input = msg.text.strip()
     try:
         with sqlite3.connect("hamkor.db") as conn:
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM mandatory_channels WHERE channel_username = ?", (channel_username,))
+            cursor.execute("DELETE FROM mandatory_channels WHERE channel_link = ? OR channel_username = ?", (channel_input, channel_input))
             conn.commit()
             affected = cursor.rowcount
 
         if affected:
-            await msg.answer(f"✅ Kanal ({channel_username}) majburiy a'zolik ro'yxatidan o'chirildi!", reply_markup=get_admin_inline_button())
-            logging.info(f"Channel removed from mandatory_channels: {channel_username}")
+            await msg.answer(f"✅ Kanal ({channel_input}) majburiy a'zolik ro'yxatidan o'chirildi!", reply_markup=get_admin_inline_button())
+            logging.info(f"Channel removed from mandatory_channels: {channel_input}")
         else:
             await msg.answer("❌ Bunday kanal topilmadi!", reply_markup=get_admin_inline_button())
-            logging.info(f"Channel not found in mandatory_channels: {channel_username}")
+            logging.info(f"Channel not found in mandatory_channels: {channel_input}")
         
         await state.finish()
         await Admin.menu.set()
@@ -1988,7 +2066,7 @@ async def remove_mandatory_channel(msg: types.Message, state: FSMContext):
 @dp.message_handler(content_types=["text"], state=ChannelManagement.add_post_channel)
 async def add_post_channel(msg: types.Message, state: FSMContext):
     channel_link = msg.text.strip()
-    if not await validate_channel_link(msg.bot, channel_link):
+    if not await validate_channel_link(msg.bot, channel_link, platform='telegram'):
         await msg.answer(
             "❌ Noto'g'ri kanal formati yoki kanal mavjud emas! Iltimos, @ChannelName yoki https://t.me/ChannelName shaklida yuboring.",
             reply_markup=get_back_button()
@@ -2056,9 +2134,9 @@ async def check_expired_channels():
             channels = cursor.fetchall()
             current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             for channel in channels:
-                if channel[5] and channel[5] < current_time:  # expire_date is at index 5
+                if channel[6] and channel[6] < current_time:  # expire_date is at index 6
                     cursor.execute("DELETE FROM mandatory_channels WHERE id = ?", (channel[0],))
-                    logging.info(f"Zayafkali kanal o'chirildi: {channel[1]}")  # channel_username
+                    logging.info(f"Zayafkali kanal o'chirildi: {channel[2]} ({channel[5]})")  # channel_link, platform
             conn.commit()
     except sqlite3.Error as e:
         logging.error(f"Zayafkali kanallarni tekshirishda xato: {e}")
@@ -2067,11 +2145,7 @@ async def check_expired_channels():
 async def schedule_expired_check():
     while True:
         await check_expired_channels()
-        await asyncio.sleep(3600)  # Har soatda tekshirish
-
-
-
-
+        await asyncio.sleep(3600) 
 
 
 async def anime_serie_edit_func(anime_id,anime_name,msg,call,serie_num,serie_id,state):
